@@ -1,18 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import type { Ref } from "vue";
 import VueViewer, { component, api, Viewer } from "v-viewer";
 import { userInfoStore } from "@/stores/userInfo";
 import { requestHeaderStore } from "@/stores/requestHeader";
 import { requestUrlStore } from "@/stores/requestUrl";
-import type { Viewer as ViewerType } from "viewerjs";
-import { max } from "lodash";
-import { fa } from "element-plus/es/locale";
 VueViewer.setDefaults({
   zIndexInline: 2021,
 });
 onMounted(() => {
   console.log(`the PublicImageShow is now mounted.`);
+  fetchImageTotalCount();
   fetchImageUrlFromServer();
   console.log(sourceImages.value);
   state.value.images = [...sourceImages.value].splice(0, 5);
@@ -35,7 +33,26 @@ const sourceImages: Ref<ImageData[]> = ref([]);
 const currentPage = ref(1);
 const pageSize = ref(9);
 const imageTotalCount = ref(9);
-const onceTime = ref(true);
+
+const fetchImageTotalCount = () => {
+  const requestOptions: RequestInit = {
+    method: "GET",
+    headers: requestHeaders.getMyHeaders(),
+    redirect: "follow",
+  };
+  fetch(
+    requestUrls.getPublicImageCountUrl(),
+    requestOptions
+  )
+    .then((response) => response.text())
+    .then((result) => {
+      const resultJson = JSON.parse(result);
+      imageTotalCount.value = Number(resultJson['data'])
+      console.log(imageTotalCount.value, imageTotalCount)
+    })
+    .catch((error) => console.log("error", error));
+
+};
 
 const fetchImageUrlFromServer = () => {
   const requestOptions: RequestInit = {
@@ -83,7 +100,7 @@ const setSourceImages = (imagesInfo: any, infoType: string) => {
 
 const state = ref({
   form: {
-    view: 2,
+    view: 0,
     zoom: -0.1,
     zoomTo: 0.8,
     rotate: 90,
@@ -113,7 +130,7 @@ const state = ref({
     title: true,
     toolbar: true,
     tooltip: true,
-    movable: false,
+    movable: true,
     zoomable: true,
     rotatable: true,
     scalable: true,
@@ -130,10 +147,10 @@ const ViewerComponent = component;
 //   api({ images: sourceImages.value, options: state.value.options })
 // );
 
-const viewer: Ref<ViewerType> = ref(
+const viewer: Ref<Viewer> = ref(
   new Viewer(document.getElementById("app")!, state.value.options)
 );
-const inited = (viewerT: ViewerType) => {
+const inited = (viewerT: Viewer) => {
   viewer.value = viewerT;
 };
 
@@ -147,6 +164,12 @@ const add = () => {
 const remove = () => {
   state.value.images.pop();
 };
+
+watch(currentPage, async (newPageSize, oldQuestion) => {
+  console.log(currentPage)
+  fetchImageUrlFromServer();
+});
+
 function view() {
   if (
     state.value.form.view >= 0 &&
@@ -255,68 +278,72 @@ function toggleInline(inline: boolean) {
       >
         Remove
       </button>
-      <button
-        type="button"
-        class="button"
-        @click="fetchImageUrlFromServer()"
-      >
+      <button type="button" class="button" @click="fetchImageUrlFromServer()">
         更新图像
       </button>
-
+      <el-pagination
+        v-model:current-page="currentPage"
+        :page-size=pageSize
+        background
+        layout="prev, pager, next"
+        :total=imageTotalCount
+      />
+    </div>
+    <div class="methods is-flex">
       <template v-if="state.options.inline">
-        <div class="field has-addons" style="width: 110px">
+        <div class="field has-addons" style="width: 80px">
           <div class="control">
             <span class="button is-static">View</span>
           </div>
-          <div class="control">
+          <!-- <div class="control">
             <input
               v-model.number="state.form.view"
               class="input"
               type="text"
               @keyup="view"
             />
-          </div>
+          </div> -->
         </div>
-        <div class="field has-addons" style="width: 140px">
-          <div class="control">
+        <div class="field has-addons" style="width: 80px">
+          <!-- <div class="control">
             <input v-model.number="state.form.zoom" class="input" type="text" />
-          </div>
+          </div> -->
           <div class="control">
             <span class="button" @click="zoom()">Zoom</span>
           </div>
         </div>
-        <div class="field has-addons" style="width: 140px">
-          <div class="control">
+        <div class="field has-addons" style="width: 80px">
+          <!-- <div class="control">
             <input
               v-model.number="state.form.zoomTo"
               class="input"
               type="text"
             />
-          </div>
+          </div> -->
           <div class="control">
             <span class="button" @click="zoomTo">Zoom to</span>
           </div>
         </div>
-        <div class="field has-addons" style="width: 140px">
-          <div class="control">
+        <div class="field has-addons" style="width: 80px">
+          <!-- <div class="control">
             <input
               v-model.number="state.form.rotate"
               class="input"
               type="text"
             />
-          </div>
+          </div> -->
           <div class="control">
             <span class="button" @click="rotate()">Rotate</span>
           </div>
         </div>
-        <div class="field has-addons" style="width: 160px">
-          <div class="control">
+        <div class="field has-addons" style="width: 80px">
+          <!-- <div class="control">
             <input
               v-model.number="state.form.rotateTo"
               class="input"
               type="text"
             />
-          </div>
+          </div> -->
           <div class="control">
             <span class="button" @click="rotateTo">Rotate to</span>
           </div>
@@ -449,7 +476,7 @@ function toggleInline(inline: boolean) {
                   />
                 </div>
               </figure>
-              <p><strong>Options: </strong>{{ scope.options }}</p>
+              <!-- <p><strong>Options: </strong>{{ scope.options }}</p> -->
             </template>
           </ViewerComponent>
         </div>

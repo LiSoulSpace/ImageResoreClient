@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { requestUrlStore } from "@/stores/requestUrl";
 import { userInfoStore } from "@/stores/userInfo";
 import { ref } from "vue";
 import { requestHeaderStore } from "../stores/requestHeader";
 const loginForm = ref({ username: "", password: "" });
 const store = requestHeaderStore();
 const userInfo = userInfoStore();
+const requestUrls = requestUrlStore()
 
 var requestOptions: RequestInit = {
   method: "POST",
@@ -15,7 +17,7 @@ var requestOptions: RequestInit = {
 const login = () => {
   const row = JSON.stringify(loginForm.value);
   requestOptions.body = row;
-  fetch("http://localhost:8080/user/login", requestOptions)
+  fetch(requestUrls.loginUrl(), requestOptions)
     .then((response) => response.text())
     .then((result) => {
       const resultJson = JSON.parse(result);

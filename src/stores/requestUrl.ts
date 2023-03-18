@@ -13,8 +13,13 @@ export const requestUrlStore = defineStore("requestUrl", () => {
 
   const getImagePathById = "/restore/imageInfo/getImagePathById";
   const getImageInfoPage = "/restore/imageInfo/getImageInfoPage";
+
+  const getImageCountByUserId = "/erstore/imageInfo/getImageCountByUserId";
+
   const getImageInfoPageByUserId =
     "/restore/imageInfo/getImageInfoPageByUserId";
+    
+  const getPublicImageCount = "/restore/imageInfo/getPublicImageCount"
 
   const getDomain = () => {
     return domain;
@@ -24,6 +29,10 @@ export const requestUrlStore = defineStore("requestUrl", () => {
     return `${domain}${userupdate}?userId=${userId}&nickName=${nickName}&avatar=${avatar}`;
   };
 
+  const loginUrl = ()=>{
+    return `${domain}${login}`
+  }
+
   const sigUrl = (userId: number) => {
     return `${domain}${sig}?userId=${userId}`;
   };
@@ -31,6 +40,7 @@ export const requestUrlStore = defineStore("requestUrl", () => {
   const logoutUrl = () => {
     return `${domain}${logout}`;
   };
+
   const uploadImageUrl = (userId: number) => {
     return `${domain}${uploadImage}?userId=${userId}`;
   };
@@ -44,6 +54,12 @@ export const requestUrlStore = defineStore("requestUrl", () => {
   const getImagePathByIdUrl = (imageId: number) => {
     return `${domain}${getImagePathById}?id=${imageId}`;
   };
+  const getImageCountByUserIdUrl = (userId: number) => {
+      return `${domain}${getImageCountByUserId}?userId=${userId}`;
+  };
+  const getPublicImageCountUrl = () =>{
+    return `${domain}${getPublicImageCount}`
+  }
   const getImageInfoPageByUserIdUrl = (
     userId: number,
     currentPage: number,
@@ -57,10 +73,13 @@ export const requestUrlStore = defineStore("requestUrl", () => {
     userUpdateUrl,
     sigUrl,
     logoutUrl,
+    loginUrl,
     uploadImageUrl,
     getImagePathByIdUrl,
     getImageInfoPageByUserIdUrl,
     getImagePathPageUrl,
     getImageInfoPageUrl,
+    getImageCountByUserIdUrl,
+    getPublicImageCountUrl
   };
 });

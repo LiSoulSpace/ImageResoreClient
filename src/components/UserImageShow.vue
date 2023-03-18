@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import type { Ref } from "vue";
 import VueViewer, { component, api, Viewer } from "v-viewer";
 import { userInfoStore } from "@/stores/userInfo";
 import { requestHeaderStore } from "@/stores/requestHeader";
 import { requestUrlStore } from "@/stores/requestUrl";
-import type { Viewer as ViewerType } from "viewerjs";
+import { genFileId } from "element-plus";
+import type { UploadInstance, UploadProps, UploadRawFile } from "element-plus";
+
 VueViewer.setDefaults({
   zIndexInline: 2021,
 });
@@ -81,7 +83,7 @@ const setSourceImages = (imagesInfo: any, infoType: string) => {
 
 const state = ref({
   form: {
-    view: 2,
+    view_num: 2,
     zoom: -0.1,
     zoomTo: 0.8,
     rotate: 90,
@@ -111,7 +113,7 @@ const state = ref({
     title: true,
     toolbar: true,
     tooltip: true,
-    movable: false,
+    movable: true,
     zoomable: true,
     rotatable: true,
     scalable: true,
@@ -124,15 +126,25 @@ const state = ref({
 });
 
 const ViewerComponent = component;
-// const viewer: Ref<ViewerType> = ref(
-//   api({ images: sourceImages.value, options: state.value.options })
-// );
 
-const viewer: Ref<ViewerType> = ref(
+const viewer: Ref<Viewer> = ref(
   new Viewer(document.getElementById("app")!, state.value.options)
 );
-const inited = (viewerT: ViewerType) => {
+const inited = (viewerT: Viewer) => {
   viewer.value = viewerT;
+};
+
+const getRequestUploadUrl = () => {
+  return requestUrls.uploadImageUrl(userInfo.userInfo.userId);
+};
+const getRequestUploadHeader = () => {
+  const newHeader = new Headers();
+  const myHeaders = requestHeaders.myHeaders;
+  myHeaders.forEach((value, key) => {
+    newHeader.append(key, value);
+  });
+  newHeader.delete("Content-Type");
+  return newHeader;
 };
 
 const add = () => {
@@ -142,15 +154,32 @@ const add = () => {
     console.log("没有更多图片!");
   }
 };
+
+const upload = ref<UploadInstance>();
+
+const handleExceed: UploadProps["onExceed"] = (files) => {
+  upload.value!.clearFiles();
+  const file = files[0] as UploadRawFile;
+  file.uid = genFileId();
+  console.log(file.uid);
+  console.log(file);
+  upload.value!.handleStart(file);
+};
+
+const submitUpload = () => {
+  upload.value!.submit();
+};
+
 const remove = () => {
   state.value.images.pop();
 };
-function view() {
+function viewT() {
   if (
-    state.value.form.view >= 0 &&
-    state.value.form.view < state.value.images.length
-  )
-    viewer.value.view(state.value.form.view);
+    state.value.form.view_num >= 0 &&
+    state.value.form.view_num < state.value.images.length
+  ) {
+    viewer.value.view(state.value.form.view_num);
+  }
 }
 function zoom(value?: number) {
   viewer.value.zoom(value || state.value.form.zoom);
@@ -185,9 +214,11 @@ function move(x: number, y: number) {
 }
 function prev() {
   viewer.value.prev();
+  console.log("viewer.value.index : ", viewer.value.index);
 }
 function next() {
   viewer.value.next();
+  console.log("viewer.value.index : ", viewer.value.index);
 }
 function play() {
   viewer.value.play();
@@ -253,67 +284,94 @@ function toggleInline(inline: boolean) {
       >
         Remove
       </button>
-      <button
-        type="button"
-        class="button"
-        @click="fetchImageUrlFromServer()"
-      >
+      <button type="button" class="button" @click="fetchImageUrlFromServer()">
         更新图像
       </button>
+      <el-upload
+        ref="upload"
+        class="upload-demo"
+        :action="getRequestUploadUrl()"
+        :headers="getRequestUploadHeader()"
+        :limit="1"
+        :on-exceed="handleExceed"
+        :auto-upload="false"
+      >
+        <template #trigger>
+          <el-button type="primary">select file</el-button>
+        </template>
+        <el-button class="ml-3" type="success" @click="submitUpload">
+          upload to server
+        </el-button>
+        <template #tip>
+          <div class="el-upload__tip text-red">
+            limit 1 file, new file will cover the old file
+          </div>
+        </template>
+      </el-upload>
+      <el-pagination
+        v-model:current-page="currentPage"
+        :page-size="pageSize"
+        background
+        layout="prev, pager, next"
+        :total="imageTotalCount"
+      />
+    </div>
+    <div class="methods is-flex">
       <template v-if="state.options.inline">
-        <div class="field has-addons" style="width: 110px">
+        <div class="field has-addons" style="width: 80px">
           <div class="control">
             <span class="button is-static">View</span>
           </div>
-          <div class="control">
+          <!-- <div class="control">
             <input
-              v-model.number="state.form.view"
+              v-model.number="state.form.view_num"
               class="input"
               type="text"
-              @keyup="view"
+              @keyup="viewT"
+              :disabled="true"
             />
-          </div>
+          </div> -->
         </div>
-        <div class="field has-addons" style="width: 140px">
-          <div class="control">
+        <div class="field has-addons" style="width: 90px">
+          <!-- <div class="control">
             <input v-model.number="state.form.zoom" class="input" type="text" />
-          </div>
+          </div> -->
           <div class="control">
             <span class="button" @click="zoom()">Zoom</span>
           </div>
         </div>
-        <div class="field has-addons" style="width: 140px">
-          <div class="control">
+        <div class="field has-addons" style="width: 90px">
+          <!-- <div class="control">
             <input
               v-model.number="state.form.zoomTo"
               class="input"
               type="text"
             />
-          </div>
+          </div> -->
           <div class="control">
             <span class="button" @click="zoomTo">Zoom to</span>
           </div>
         </div>
-        <div class="field has-addons" style="width: 140px">
-          <div class="control">
+        <div class="field has-addons" style="width: 90px">
+          <!-- <div class="control">
             <input
               v-model.number="state.form.rotate"
               class="input"
               type="text"
             />
-          </div>
+          </div> -->
           <div class="control">
             <span class="button" @click="rotate()">Rotate</span>
           </div>
         </div>
-        <div class="field has-addons" style="width: 160px">
-          <div class="control">
+        <div class="field has-addons" style="width: 100px">
+          <!-- <div class="control">
             <input
               v-model.number="state.form.rotateTo"
               class="input"
               type="text"
             />
-          </div>
+          </div> -->
           <div class="control">
             <span class="button" @click="rotateTo">Rotate to</span>
           </div>
