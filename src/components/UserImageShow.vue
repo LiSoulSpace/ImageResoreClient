@@ -5,7 +5,7 @@ import VueViewer, { component, api, Viewer } from "v-viewer";
 import { userInfoStore } from "@/stores/userInfo";
 import { requestHeaderStore } from "@/stores/requestHeader";
 import { requestUrlStore } from "@/stores/requestUrl";
-import { genFileId } from "element-plus";
+import { ElMessage, genFileId } from "element-plus";
 import type { UploadInstance, UploadProps, UploadRawFile } from "element-plus";
 
 VueViewer.setDefaults({
@@ -16,6 +16,10 @@ onMounted(() => {
   fetchImageUrlFromServer();
 });
 
+const activeName = ref("1");
+const value1 = ref(8000);
+const checkedWallpaper = ref(false);
+const checkedPeople = ref(false);
 const requestUrls = requestUrlStore();
 const requestHeaders = requestHeaderStore();
 const userInfo = userInfoStore();
@@ -137,6 +141,7 @@ const inited = (viewerT: Viewer) => {
 const getRequestUploadUrl = () => {
   return requestUrls.uploadImageUrl(userInfo.userInfo.userId);
 };
+
 const getRequestUploadHeader = () => {
   const newHeader = new Headers();
   const myHeaders = requestHeaders.myHeaders;
@@ -168,30 +173,20 @@ const handleExceed: UploadProps["onExceed"] = (files) => {
 
 const submitUpload = () => {
   upload.value!.submit();
+  ElMessage({
+    message: "图像上传完成",
+    type: "success",
+  });
 };
 
 const remove = () => {
   state.value.images.pop();
 };
-function viewT() {
-  if (
-    state.value.form.view_num >= 0 &&
-    state.value.form.view_num < state.value.images.length
-  ) {
-    viewer.value.view(state.value.form.view_num);
-  }
-}
 function zoom(value?: number) {
   viewer.value.zoom(value || state.value.form.zoom);
 }
-function zoomTo() {
-  viewer.value.zoomTo(state.value.form.zoomTo);
-}
 function rotate(value?: number) {
   viewer.value.rotate(value || state.value.form.rotate);
-}
-function rotateTo() {
-  viewer.value.rotateTo(state.value.form.rotateTo);
 }
 function scaleX(value?: number) {
   if (value) {
@@ -245,76 +240,72 @@ function toggleInline(inline: boolean) {
 
 <template>
   <div>
+    <el-collapse v-model="activeName" accordion>
+      <el-collapse-item title="分类选择" name="categorySelectionCollapseItem">
+        <el-row>
+          <el-col :span="8">
+            <div>
+              <el-checkbox v-model="checkedWallpaper" label="壁纸" />
+              <el-checkbox v-model="checkedPeople" label="人像" />
+            </div>
+          </el-col>
+          <el-col :span="8">
+            <div class="grid-content ep-bg-purple-light" />
+          </el-col>
+          <el-col :span="8">
+            <div class="slider-demo-block">
+              <span class="demonstration">Default value</span>
+              <el-slider v-model="value1" />
+            </div>
+          </el-col>
+        </el-row>
+      </el-collapse-item>
+      <el-collapse-item title="文件上传" name="imageUploadCollapseItem">
+        <el-upload ref="upload" class="upload-demo" :action="getRequestUploadUrl()" :headers="getRequestUploadHeader()"
+          :limit="1" :on-exceed="handleExceed" :auto-upload="false">
+          <template #trigger>
+            <el-button type="primary">选择文件</el-button>
+          </template>
+          <el-button class="ml-3" type="success" @click="submitUpload">
+            上传文件
+          </el-button>
+          <template #tip>
+            <div class="el-upload__tip text-red">
+              限制 1个 文件 新文件会覆盖旧文件
+            </div>
+          </template>
+        </el-upload>
+      </el-collapse-item>
+    </el-collapse>
     <div class="methods is-flex">
       <div class="field has-addons">
         <p class="control">
-          <button
-            type="button"
-            class="button is-primary"
-            :class="{ ' is-active': !state.options.inline }"
-            @click="toggleInline(false)"
-          >
-            Modal
+          <button type="button" class="button is-primary" :class="{ ' is-active': !state.options.inline }"
+            @click="toggleInline(false)">
+            预览模式
           </button>
         </p>
         <p class="control">
-          <button
-            type="button"
-            class="button is-primary"
-            :class="{ ' is-active': state.options.inline }"
-            @click="toggleInline(true)"
-          >
-            Inline
+          <button type="button" class="button is-primary" :class="{ ' is-active': state.options.inline }"
+            @click="toggleInline(true)">
+            处理模式
           </button>
         </p>
       </div>
-      <button
-        type="button"
-        class="button"
-        :disabled="state.images.length === sourceImages.length"
-        @click="add"
-      >
-        Add
-      </button>
-      <button
-        type="button"
-        class="button"
-        :disabled="state.images.length === 1"
-        @click="remove"
-      >
-        Remove
-      </button>
-      <button type="button" class="button" @click="fetchImageUrlFromServer()">
-        更新图像
-      </button>
-      <el-upload
-        ref="upload"
-        class="upload-demo"
-        :action="getRequestUploadUrl()"
-        :headers="getRequestUploadHeader()"
-        :limit="1"
-        :on-exceed="handleExceed"
-        :auto-upload="false"
-      >
-        <template #trigger>
-          <el-button type="primary">select file</el-button>
-        </template>
-        <el-button class="ml-3" type="success" @click="submitUpload">
-          upload to server
-        </el-button>
-        <template #tip>
-          <div class="el-upload__tip text-red">
-            limit 1 file, new file will cover the old file
-          </div>
-        </template>
-      </el-upload>
-      <el-pagination
-        v-model:current-page="currentPage"
-        :page-size="pageSize"
-        background
-        layout="prev, pager, next"
-        :total="imageTotalCount"
-      />
+      <div>
+        <button type="button" class="button" :disabled="state.images.length === sourceImages.length" @click="add">
+          添加一张图片
+        </button>
+        <button type="button" class="button" :disabled="state.images.length === 1" @click="remove">
+          移除一张图片
+        </button>
+        <button type="button" class="button" @click="fetchImageUrlFromServer()">
+          更新图像
+        </button>
+      </div>
+
+      <el-pagination v-model:current-page="currentPage" :page-size="pageSize" background layout="prev, pager, next"
+        :total="imageTotalCount" />
     </div>
     <div class="methods is-flex">
       <template v-if="state.options.inline">
@@ -322,58 +313,15 @@ function toggleInline(inline: boolean) {
           <div class="control">
             <span class="button is-static">View</span>
           </div>
-          <!-- <div class="control">
-            <input
-              v-model.number="state.form.view_num"
-              class="input"
-              type="text"
-              @keyup="viewT"
-              :disabled="true"
-            />
-          </div> -->
         </div>
         <div class="field has-addons" style="width: 90px">
-          <!-- <div class="control">
-            <input v-model.number="state.form.zoom" class="input" type="text" />
-          </div> -->
           <div class="control">
             <span class="button" @click="zoom()">Zoom</span>
           </div>
         </div>
         <div class="field has-addons" style="width: 90px">
-          <!-- <div class="control">
-            <input
-              v-model.number="state.form.zoomTo"
-              class="input"
-              type="text"
-            />
-          </div> -->
-          <div class="control">
-            <span class="button" @click="zoomTo">Zoom to</span>
-          </div>
-        </div>
-        <div class="field has-addons" style="width: 90px">
-          <!-- <div class="control">
-            <input
-              v-model.number="state.form.rotate"
-              class="input"
-              type="text"
-            />
-          </div> -->
           <div class="control">
             <span class="button" @click="rotate()">Rotate</span>
-          </div>
-        </div>
-        <div class="field has-addons" style="width: 100px">
-          <!-- <div class="control">
-            <input
-              v-model.number="state.form.rotateTo"
-              class="input"
-              type="text"
-            />
-          </div> -->
-          <div class="control">
-            <span class="button" @click="rotateTo">Rotate to</span>
           </div>
         </div>
         <div class="field has-addons">
@@ -391,69 +339,73 @@ function toggleInline(inline: boolean) {
         <div class="field has-addons">
           <div class="control">
             <button type="button" class="button" @click="rotate(-90)">
-              Rotate Left
+              向左旋转
             </button>
           </div>
           <div class="control">
             <button type="button" class="button" @click="rotate(90)">
-              Rotate Right
+              向右旋转
             </button>
           </div>
         </div>
         <div class="field has-addons">
           <div class="control">
             <button type="button" class="button" @click="scaleX()">
-              Flip Horizontal
+              水平翻转
             </button>
           </div>
           <div class="control">
             <button type="button" class="button" @click="scaleY()">
-              Flip Vertical
+              垂直翻转
             </button>
           </div>
         </div>
         <div class="field has-addons">
           <div class="control">
             <button type="button" class="button" @click="move(-10, 0)">
-              Left
+              左移
             </button>
           </div>
           <div class="control">
             <button type="button" class="button" @click="move(10, 0)">
-              Right
+              右移
             </button>
           </div>
           <div class="control">
             <button type="button" class="button" @click="move(0, -10)">
-              Up
+              上移
             </button>
           </div>
           <div class="control">
             <button type="button" class="button" @click="move(0, 10)">
-              Down
+              下移
             </button>
           </div>
         </div>
         <div class="field has-addons">
           <div class="control">
-            <button type="button" class="button" @click="prev">Prev</button>
+            <button type="button" class="button" @click="prev">前一张</button>
           </div>
           <div class="control">
-            <button type="button" class="button" @click="next">Next</button>
+            <button type="button" class="button" @click="next">后一张</button>
           </div>
           <div class="control">
-            <button type="button" class="button" @click="play">Play</button>
+            <button type="button" class="button" @click="play">区域全屏</button>
           </div>
           <div class="control">
-            <button type="button" class="button" @click="stop">Stop</button>
+            <button type="button" class="button" @click="stop">
+              退出区域全屏
+            </button>
           </div>
         </div>
-        <button type="button" class="button" @click="full">Full</button>
-        <button type="button" class="button" @click="tooltip">Tooltip</button>
-        <button type="button" class="button" @click="reset">Reset</button>
+        <button type="button" class="button" @click="full">网页全屏</button>
+        <button type="button" class="button" @click="tooltip">
+          显示缩放比例
+        </button>
+        <button type="button" class="button" @click="reset">复原</button>
       </template>
       <template v-else>
-        <button type="button" class="button" @click="show">Show</button>
+        <button type="button" class="button" @click="show">网页全屏</button>
       </template>
     </div>
     <div class="tile is-ancestor">
@@ -461,17 +413,9 @@ function toggleInline(inline: boolean) {
         <div class="tile is-child">
           <nav class="panel options-panel">
             <p class="panel-heading">Options</p>
-            <div
-              v-for="item of state.toggleOptions"
-              :key="item"
-              class="panel-block"
-            >
+            <div v-for="item of state.toggleOptions" :key="item" class="panel-block">
               <label class="checkbox">
-                <input
-                  v-model="state.options[item]"
-                  type="checkbox"
-                  name="button"
-                />
+                <input v-model="state.options[item]" type="checkbox" name="button" />
                 {{ item }}
               </label>
             </div>
@@ -480,28 +424,12 @@ function toggleInline(inline: boolean) {
       </div>
       <div class="tile is-10 is-vertical is-parent">
         <div class="viewer-wrapper">
-          <ViewerComponent
-            id="ViewerComponent1"
-            ref="viewer"
-            :options="state.options"
-            :images="state.images"
-            rebuild
-            class="viewer"
-            @inited="inited"
-          >
+          <ViewerComponent id="ViewerComponent1" ref="viewer" :options="state.options" :images="state.images" rebuild
+            class="viewer" @inited="inited">
             <template #default="scope">
               <figure class="images">
-                <div
-                  v-for="{ source, thumbnail, title } in scope.images"
-                  :key="source"
-                  class="image-wrapper"
-                >
-                  <img
-                    class="image"
-                    :src="thumbnail"
-                    :data-source="source"
-                    :alt="title"
-                  />
+                <div v-for="{ source, thumbnail, title } in scope.images" :key="source" class="image-wrapper">
+                  <img class="image" :src="thumbnail" :data-source="source" :alt="title" />
                 </div>
               </figure>
               <p><strong>Options: </strong>{{ scope.options }}</p>
@@ -519,16 +447,20 @@ function toggleInline(inline: boolean) {
   background: #333;
   height: 100%;
 }
+
 .methods {
   margin-bottom: 1em;
   flex-wrap: wrap;
-  & > * {
+
+  &>* {
     margin-right: 0.75rem;
   }
 }
+
 .options-panel {
   .panel-block {
     padding: 0;
+
     .checkbox {
       display: block;
       width: 100%;
@@ -537,8 +469,10 @@ function toggleInline(inline: boolean) {
     }
   }
 }
+
 .viewer {
   height: 100%;
+
   .images {
     height: 100%;
     display: flex;
@@ -547,10 +481,12 @@ function toggleInline(inline: boolean) {
     align-items: center;
     flex-wrap: wrap;
     padding: 5px;
+
     .image-wrapper {
       display: inline-block;
       width: calc(33% - 20px);
       margin: 5px 5px 0 5px;
+
       .image {
         width: 100%;
         cursor: pointer;
@@ -558,5 +494,48 @@ function toggleInline(inline: boolean) {
       }
     }
   }
+}
+
+.slider-demo-block {
+  display: flex;
+  align-items: center;
+  margin-right: 20px;
+}
+
+.slider-demo-block .el-slider {
+  margin-top: 0;
+  margin-left: 12px;
+}
+
+.slider-demo-block .demonstration {
+  font-size: 14px;
+  color: var(--el-text-color-secondary);
+  line-height: 44px;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 0;
+}
+
+.slider-demo-block .demonstration+.el-slider {
+  flex: 0 0 70%;
+}
+
+.el-row {
+  margin-bottom: 20px;
+}
+
+.el-row:last-child {
+  margin-bottom: 0;
+}
+
+.el-col {
+  border-radius: 4px;
+}
+
+.grid-content {
+  border-radius: 4px;
+  min-height: 36px;
 }
 </style>

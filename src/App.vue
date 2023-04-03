@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from "vue-router";
 import { useRouter, useRoute } from "vue-router";
-
+import { ElMessageBox } from "element-plus";
 import { ref, onMounted } from "vue";
 import {
   Document,
@@ -37,7 +37,8 @@ const checkIsLogin = () => {
 };
 
 const routerTo = (pathT: string) => {
-  if (pathT == '/imageshow') {
+  router.push(pathT);
+  if (pathT == "/imageshow") {
     if (checkIsLogin()) {
       router.push(pathT);
     } else {
@@ -52,6 +53,12 @@ const routerTo = (pathT: string) => {
 onMounted(() => {
   console.log(`the App is now mounted.`);
 });
+
+const drawer = ref(false);
+const direction = ref("ltr");
+const pageHeaderBack = () => {
+  router.back()
+};
 </script>
 
 <template>
@@ -59,53 +66,54 @@ onMounted(() => {
   <div class="common-layout">
     <el-container>
       <el-header>
-        <el-page-header :icon="null">
+        <el-page-header :icon="null" @back="pageHeaderBack">
           <template #content>
-            <div class="flex">
-              <el-avatar
-                :size="32"
-                class="mr-3"
-                src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"
-              />
-              <span class="text-large font-600 mr-3"> {{userInfo.userInfo.username}} </span>
-              <span
-                class="text-sm mr-2"
-                style="color: var(--el-text-color-regular)"
-              >
-              </span>
-              <el-tag>Default</el-tag>
-            </div>
+            <el-button type="primary" style="margin-left: 16px" @click="drawer = true">
+              open
+            </el-button>
           </template>
           <template #extra>
-            <div class="flex items-center">
-              <el-button @click="changHandle">collapse</el-button>
+            <div class="flex">
+              <el-avatar :size="32" class="mr-3"
+                src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png" />
+              <span class="text-large font-600 mr-3">
+                {{ userInfo.userInfo.username }}
+              </span>
+              <span class="text-sm mr-2" style="color: var(--el-text-color-regular)">
+              </span>
+              <!-- <span> <el-tag>Default</el-tag></span> -->
+              <span class="flex items-center">
+                <el-button>Print</el-button>
+                <el-button type="primary" class="ml-2">Edit</el-button>
+              </span>
             </div>
           </template>
         </el-page-header>
       </el-header>
       <el-container>
-        <el-aside width="200px">
-          <el-menu
-            default-active="1"
-            class="el-menu-vertical-demo"
-            :collapse="isCollapse"
-            @open="handleOpen"
-            @close="handleClose"
-          >
+        <el-drawer v-model="drawer" title="导航栏" size="15%" :direction="direction">
+          <el-menu default-active="1" class="el-menu-vertical-demo" :collapse="isCollapse" @open="handleOpen"
+            @close="handleClose">
             <el-menu-item index="1" @click="routerTo('/')">
-              <el-icon><location /></el-icon>
+              <el-icon>
+                <location />
+              </el-icon>
               <template #title>
                 <div to="/">公共图像预览</div>
               </template>
             </el-menu-item>
             <el-menu-item index="2" @click="routerTo('/imageshow')">
-              <el-icon><setting /></el-icon>
+              <el-icon>
+                <setting />
+              </el-icon>
               <template #title>
                 <div to="/imageshow">个人图像预览</div>
               </template>
             </el-menu-item>
             <el-menu-item index="3" @click="routerTo('/login')">
-              <el-icon><User /></el-icon>
+              <el-icon>
+                <User />
+              </el-icon>
               <template #title>
                 <div to="/login">登录</div>
               </template>
@@ -117,7 +125,7 @@ onMounted(() => {
               </template>
             </el-menu-item>
           </el-menu>
-        </el-aside>
+        </el-drawer>
         <el-container>
           <el-main>
             <RouterView />

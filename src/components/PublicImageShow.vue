@@ -242,52 +242,29 @@ function toggleInline(inline: boolean) {
     <div class="methods is-flex">
       <div class="field has-addons">
         <p class="control">
-          <button
-            type="button"
-            class="button is-primary"
-            :class="{ ' is-active': !state.options.inline }"
-            @click="toggleInline(false)"
-          >
+          <button type="button" class="button is-primary" :class="{ ' is-active': !state.options.inline }"
+            @click="toggleInline(false)">
             Modal
           </button>
         </p>
         <p class="control">
-          <button
-            type="button"
-            class="button is-primary"
-            :class="{ ' is-active': state.options.inline }"
-            @click="toggleInline(true)"
-          >
+          <button type="button" class="button is-primary" :class="{ ' is-active': state.options.inline }"
+            @click="toggleInline(true)">
             Inline
           </button>
         </p>
       </div>
-      <button
-        type="button"
-        class="button"
-        :disabled="state.images.length === sourceImages.length"
-        @click="add"
-      >
+      <button type="button" class="button" :disabled="state.images.length === sourceImages.length" @click="add">
         Add
       </button>
-      <button
-        type="button"
-        class="button"
-        :disabled="state.images.length === 1"
-        @click="remove"
-      >
+      <button type="button" class="button" :disabled="state.images.length === 1" @click="remove">
         Remove
       </button>
       <button type="button" class="button" @click="fetchImageUrlFromServer()">
         更新图像
       </button>
-      <el-pagination
-        v-model:current-page="currentPage"
-        :page-size=pageSize
-        background
-        layout="prev, pager, next"
-        :total=imageTotalCount
-      />
+      <el-pagination v-model:current-page="currentPage" :page-size=pageSize background layout="prev, pager, next"
+        :total=imageTotalCount />
     </div>
     <div class="methods is-flex">
       <template v-if="state.options.inline">
@@ -296,54 +273,54 @@ function toggleInline(inline: boolean) {
             <span class="button is-static">View</span>
           </div>
           <!-- <div class="control">
-            <input
-              v-model.number="state.form.view"
-              class="input"
-              type="text"
-              @keyup="view"
-            />
-          </div> -->
+              <input
+                v-model.number="state.form.view"
+                class="input"
+                type="text"
+                @keyup="view"
+              />
+            </div> -->
         </div>
         <div class="field has-addons" style="width: 80px">
           <!-- <div class="control">
-            <input v-model.number="state.form.zoom" class="input" type="text" />
-          </div> -->
+              <input v-model.number="state.form.zoom" class="input" type="text" />
+            </div> -->
           <div class="control">
             <span class="button" @click="zoom()">Zoom</span>
           </div>
         </div>
         <div class="field has-addons" style="width: 80px">
           <!-- <div class="control">
-            <input
-              v-model.number="state.form.zoomTo"
-              class="input"
-              type="text"
-            />
-          </div> -->
+              <input
+                v-model.number="state.form.zoomTo"
+                class="input"
+                type="text"
+              />
+            </div> -->
           <div class="control">
             <span class="button" @click="zoomTo">Zoom to</span>
           </div>
         </div>
         <div class="field has-addons" style="width: 80px">
           <!-- <div class="control">
-            <input
-              v-model.number="state.form.rotate"
-              class="input"
-              type="text"
-            />
-          </div> -->
+              <input
+                v-model.number="state.form.rotate"
+                class="input"
+                type="text"
+              />
+            </div> -->
           <div class="control">
             <span class="button" @click="rotate()">Rotate</span>
           </div>
         </div>
         <div class="field has-addons" style="width: 80px">
           <!-- <div class="control">
-            <input
-              v-model.number="state.form.rotateTo"
-              class="input"
-              type="text"
-            />
-          </div> -->
+              <input
+                v-model.number="state.form.rotateTo"
+                class="input"
+                type="text"
+              />
+            </div> -->
           <div class="control">
             <span class="button" @click="rotateTo">Rotate to</span>
           </div>
@@ -433,17 +410,9 @@ function toggleInline(inline: boolean) {
         <div class="tile is-child">
           <nav class="panel options-panel">
             <p class="panel-heading">Options</p>
-            <div
-              v-for="item of state.toggleOptions"
-              :key="item"
-              class="panel-block"
-            >
+            <div v-for="item of state.toggleOptions" :key="item" class="panel-block">
               <label class="checkbox">
-                <input
-                  v-model="state.options[item]"
-                  type="checkbox"
-                  name="button"
-                />
+                <input v-model="state.options[item]" type="checkbox" name="button" />
                 {{ item }}
               </label>
             </div>
@@ -452,28 +421,12 @@ function toggleInline(inline: boolean) {
       </div>
       <div class="tile is-10 is-vertical is-parent">
         <div class="viewer-wrapper">
-          <ViewerComponent
-            id="ViewerComponent1"
-            ref="viewer"
-            :options="state.options"
-            :images="state.images"
-            rebuild
-            class="viewer"
-            @inited="inited"
-          >
+          <ViewerComponent id="ViewerComponent1" ref="viewer" :options="state.options" :images="state.images" rebuild
+            class="viewer" @inited="inited">
             <template #default="scope">
               <figure class="images">
-                <div
-                  v-for="{ source, thumbnail, title } in scope.images"
-                  :key="source"
-                  class="image-wrapper"
-                >
-                  <img
-                    class="image"
-                    :src="thumbnail"
-                    :data-source="source"
-                    :alt="title"
-                  />
+                <div v-for="{ source, thumbnail, title } in scope.images" :key="source" class="image-wrapper">
+                  <img class="image" :src="thumbnail" :data-source="source" :alt="title" />
                 </div>
               </figure>
               <!-- <p><strong>Options: </strong>{{ scope.options }}</p> -->
@@ -491,16 +444,20 @@ function toggleInline(inline: boolean) {
   background: #333;
   height: 100%;
 }
+
 .methods {
   margin-bottom: 1em;
   flex-wrap: wrap;
-  & > * {
+
+  &>* {
     margin-right: 0.75rem;
   }
 }
+
 .options-panel {
   .panel-block {
     padding: 0;
+
     .checkbox {
       display: block;
       width: 100%;
@@ -509,8 +466,10 @@ function toggleInline(inline: boolean) {
     }
   }
 }
+
 .viewer {
   height: 100%;
+
   .images {
     height: 100%;
     display: flex;
@@ -519,10 +478,12 @@ function toggleInline(inline: boolean) {
     align-items: center;
     flex-wrap: wrap;
     padding: 5px;
+
     .image-wrapper {
       display: inline-block;
       width: calc(33% - 20px);
       margin: 5px 5px 0 5px;
+
       .image {
         width: 100%;
         cursor: pointer;
