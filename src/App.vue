@@ -66,10 +66,10 @@ const pageHeaderBack = () => {
   <div class="common-layout">
     <el-container>
       <el-header>
-        <el-page-header :icon="null" @back="pageHeaderBack">
+        <el-page-header :icon="null" title="图像存储修复平台">
           <template #content>
-            <el-button type="primary" style="margin-left: 16px" @click="drawer = true">
-              open
+            <el-button style="margin-left: 16px" @click="drawer = true">
+              <el-icon><Menu /></el-icon>
             </el-button>
           </template>
           <template #extra>

@@ -17,7 +17,8 @@ onMounted(() => {
 });
 
 const activeName = ref("1");
-const value1 = ref(8000);
+const imgWidthDis = ref([100, 8000]);
+const imgHeightDis = ref([100, 8000]);
 const checkedWallpaper = ref(false);
 const checkedPeople = ref(false);
 const requestUrls = requestUrlStore();
@@ -243,19 +244,36 @@ function toggleInline(inline: boolean) {
     <el-collapse v-model="activeName" accordion>
       <el-collapse-item title="分类选择" name="categorySelectionCollapseItem">
         <el-row>
-          <el-col :span="8">
-            <div>
-              <el-checkbox v-model="checkedWallpaper" label="壁纸" />
-              <el-checkbox v-model="checkedPeople" label="人像" />
+          <el-col :span="4">
+            <div style="heigh=">
+              <div><el-checkbox v-model="checkedWallpaper" label="壁纸" /></div>
+              <div><el-checkbox v-model="checkedPeople" label="人像" /></div>
+            </div>
+          </el-col>
+          <el-col :span="12">
+            <div style="align-items: center;">
+              <div class="dis-input-block">
+                <el-text style="width: 220px;">高度范围(输入)</el-text>
+                <el-input v-model="imgHeightDis[0]" placeholder="min" />
+                <el-input v-model="imgHeightDis[1]" placeholder="max" />
+              </div>
+              <div class="dis-input-block">
+                <el-text style="width: 220px;">宽度范围(输入)</el-text>
+                <el-input v-model="imgWidthDis[0]" placeholder="min" />
+                <el-input v-model="imgWidthDis[1]" placeholder="max" />
+              </div>
             </div>
           </el-col>
           <el-col :span="8">
-            <div class="grid-content ep-bg-purple-light" />
-          </el-col>
-          <el-col :span="8">
-            <div class="slider-demo-block">
-              <span class="demonstration">Default value</span>
-              <el-slider v-model="value1" />
+            <div>
+              <div class="slider-demo-block">
+                <span class="demonstration">图像高度范围</span>
+                <el-slider v-model="imgHeightDis" range :max="8000" />
+              </div>
+              <div class="slider-demo-block">
+                <span class="demonstration">图像宽度范围</span>
+                <el-slider v-model="imgWidthDis" range :max="8000" />
+              </div>
             </div>
           </el-col>
         </el-row>
@@ -494,6 +512,11 @@ function toggleInline(inline: boolean) {
       }
     }
   }
+}
+
+.dis-input-block{
+  display: inline-flex;
+  align-items: center;
 }
 
 .slider-demo-block {
