@@ -37,18 +37,18 @@ const checkIsLogin = () => {
 };
 
 const routerTo = (pathT: string) => {
-  router.push(pathT);
-  if (pathT == "/imageshow") {
-    if (checkIsLogin()) {
-      router.push(pathT);
-    } else {
-      router.push("/login");
-    }
-  } else {
-    router.push({
-      path: pathT,
-    });
-  }
+  router.push({path:pathT});
+  // if (pathT == "/imageshow") {
+  //   if (checkIsLogin()) {
+  //     router.push(pathT);
+  //   } else {
+  //     router.push("/login");
+  //   }
+  // } else {
+  //   router.push({
+  //     path: pathT,
+  //   });
+  // }
 };
 onMounted(() => {
   console.log(`the App is now mounted.`);

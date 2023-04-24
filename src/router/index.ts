@@ -21,7 +21,12 @@ const router = createRouter({
       path: "/login",
       name: "login",
       component: () => import("../views/LoginView.vue"),
-    }
+    },
+    {
+      path: "/imageinfo/:imagemd5",
+      name: "imageInfo",
+      component: () => import("../views/ImageInfo.vue"),
+    },
   ],
 });
 

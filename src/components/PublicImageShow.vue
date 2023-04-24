@@ -5,34 +5,75 @@ import VueViewer, { component, api, Viewer } from "v-viewer";
 import { userInfoStore } from "@/stores/userInfo";
 import { requestHeaderStore } from "@/stores/requestHeader";
 import { requestUrlStore } from "@/stores/requestUrl";
-VueViewer.setDefaults({
-  zIndexInline: 2021,
-});
-onMounted(() => {
-  console.log(`the PublicImageShow is now mounted.`);
-  fetchImageTotalCount();
-  fetchImageUrlFromServer();
-  console.log(sourceImages.value);
-  state.value.images = [...sourceImages.value].splice(0, 5);
-  console.log(state.value.images);
-});
-const requestUrls = requestUrlStore();
-const requestHeaders = requestHeaderStore();
-const userInfo = userInfoStore();
+import { ElMessage, genFileId } from "element-plus";
+import router from "@/router";
+import ImageInfoBlock from "./ImageInfoBlock.vue";
+
 class ImageData {
   thumbnail: string;
   source: string;
   title: string;
+  md5?: string;
   constructor(source: string, thumbnail: string, title: string) {
     this.source = source;
     this.thumbnail = thumbnail;
     this.title = title;
   }
 }
+
+VueViewer.setDefaults({
+  zIndexInline: 2021,
+});
+
+onMounted(() => {
+  fetchImageTotalCount();
+  fetchImageUrlFromServer();
+});
+
+const activeName = ref("1");
+const imgWidthDis = ref([100, 8000]);
+const imgHeightDis = ref([100, 8000]);
+const checkedWallpaper = ref(false);
+const checkedPeople = ref(false);
 const sourceImages: Ref<ImageData[]> = ref([]);
 const currentPage = ref(1);
 const pageSize = ref(9);
 const imageTotalCount = ref(9);
+
+const requestUrls = requestUrlStore();
+const requestHeaders = requestHeaderStore();
+const userInfo = userInfoStore();
+const isOptionShow = ref<boolean>(false)
+
+const fetchImageUrlFromServer = () => {
+  const requestOptions: RequestInit = {
+    method: "GET",
+    headers: requestHeaders.getMyHeaders(),
+    redirect: "follow",
+  };
+  fetch(
+    requestUrls.getImageInfoPageUrl(
+      currentPage.value,
+      pageSize.value
+    ),
+    requestOptions
+  )
+    .then((response) => response.text())
+    .then((result) => {
+      console.log(result)
+      const imageListJson = JSON.parse(result);
+      const imageInfoList = imageListJson["data"];
+      const imageInfoListJson = JSON.parse(imageInfoList);
+      setSourceImages(imageInfoListJson, "json");
+    })
+    .catch((error) => {
+      console.log("error", error)
+      ElMessage({
+        message: `图像信息获取失败\n${error}`,
+        type: "error",
+      });
+    });
+};
 
 const fetchImageTotalCount = () => {
   const requestOptions: RequestInit = {
@@ -51,29 +92,11 @@ const fetchImageTotalCount = () => {
       console.log(imageTotalCount.value, imageTotalCount)
     })
     .catch((error) => console.log("error", error));
-
 };
 
-const fetchImageUrlFromServer = () => {
-  const requestOptions: RequestInit = {
-    method: "GET",
-    headers: requestHeaders.getMyHeaders(),
-    redirect: "follow",
-  };
-
-  fetch(
-    requestUrls.getImageInfoPageUrl(currentPage.value, pageSize.value),
-    requestOptions
-  )
-    .then((response) => response.text())
-    .then((result) => {
-      const imageListJson = JSON.parse(result);
-      const imageInfoList = imageListJson["data"];
-      const imageInfoListJson = JSON.parse(imageInfoList);
-      setSourceImages(imageInfoListJson, "json");
-    })
-    .catch((error) => console.log("error", error));
-};
+watch(currentPage, async (newPageSize, oldQuestion) => {
+  fetchImageUrlFromServer();
+});
 
 const setSourceImages = (imagesInfo: any, infoType: string) => {
   if (infoType == "json") {
@@ -86,6 +109,7 @@ const setSourceImages = (imagesInfo: any, infoType: string) => {
         requestUrls.getDomain() + imagesInfo[i]["imagePath"],
         imagesInfo[i]["imageName"]
       );
+      data.md5 = imagesInfo[i]['imageMd5']
       sourceImages.value.push(data);
     }
   }
@@ -100,7 +124,7 @@ const setSourceImages = (imagesInfo: any, infoType: string) => {
 
 const state = ref({
   form: {
-    view: 0,
+    view_num: 2,
     zoom: -0.1,
     zoomTo: 0.8,
     rotate: 90,
@@ -143,15 +167,23 @@ const state = ref({
 });
 
 const ViewerComponent = component;
-// const viewer: Ref<ViewerType> = ref(
-//   api({ images: sourceImages.value, options: state.value.options })
-// );
 
 const viewer: Ref<Viewer> = ref(
   new Viewer(document.getElementById("app")!, state.value.options)
 );
 const inited = (viewerT: Viewer) => {
   viewer.value = viewerT;
+};
+
+
+const getRequestUploadHeader = () => {
+  const newHeader = new Headers();
+  const myHeaders = requestHeaders.myHeaders;
+  myHeaders.forEach((value, key) => {
+    newHeader.append(key, value);
+  });
+  newHeader.delete("Content-Type");
+  return newHeader;
 };
 
 const add = () => {
@@ -161,33 +193,24 @@ const add = () => {
     console.log("没有更多图片!");
   }
 };
+
+const clear_tag_selection = () => {
+  
+}
+
+// 图像详情 button api
+const image_detail = () => {
+  router.push(`imageinfo/${sourceImages.value[viewer.value.index].md5}`)
+}
+
 const remove = () => {
   state.value.images.pop();
 };
-
-watch(currentPage, async (newPageSize, oldQuestion) => {
-  console.log(currentPage)
-  fetchImageUrlFromServer();
-});
-
-function view() {
-  if (
-    state.value.form.view >= 0 &&
-    state.value.form.view < state.value.images.length
-  )
-    viewer.value.view(state.value.form.view);
-}
-function zoom(value?: number) {
+const zoom = (value?: number) => {
   viewer.value.zoom(value || state.value.form.zoom);
-}
-function zoomTo() {
-  viewer.value.zoomTo(state.value.form.zoomTo);
 }
 function rotate(value?: number) {
   viewer.value.rotate(value || state.value.form.rotate);
-}
-function rotateTo() {
-  viewer.value.rotateTo(state.value.form.rotateTo);
 }
 function scaleX(value?: number) {
   if (value) {
@@ -210,9 +233,11 @@ function move(x: number, y: number) {
 }
 function prev() {
   viewer.value.prev();
+  console.log("viewer.value.index : ", viewer.value.index);
 }
 function next() {
   viewer.value.next();
+  console.log("viewer.value.index : ", viewer.value.index);
 }
 function play() {
   viewer.value.play();
@@ -235,36 +260,139 @@ function reset() {
 function toggleInline(inline: boolean) {
   state.value.options.inline = inline;
 }
+
+// 下方内容有关于 多选输入框 用于tag的多选
+interface ListItem {
+  value: string
+  label: string
+}
+
+const list = ref<ListItem[]>([])
+const options = ref<ListItem[]>([])
+const value = ref<string[]>([])
+const loading = ref(false)
+
+onMounted(() => {
+  list.value = states.map((item) => {
+    return { value: `value:${item}`, label: `label:${item}` }
+  })
+})
+
+const remoteMethod = (query: string) => {
+  if (query) {
+    loading.value = true
+    setTimeout(() => {
+      loading.value = false
+      options.value = list.value.filter((item) => {
+        return item.label.toLowerCase().includes(query.toLowerCase())
+      })
+    }, 200)
+  } else {
+    options.value = list.value
+  }
+}
+
+const states = [
+  'Alabama',
+  'Alaska',
+  'Arizona',
+  'Arkansas',
+  'California',
+  'Colorado',
+  'Connecticut',
+  'Delaware',
+  'Florida',
+  'Georgia',
+  'Wisconsin',
+  'Wyoming',
+]
 </script>
 
 <template>
   <div>
+    <el-collapse v-model="activeName" accordion>
+      <el-collapse-item title="分类选择" name="categorySelectionCollapseItem">
+        <el-row>
+          <el-col :span="12">
+            <el-space wrap>
+              <div><el-checkbox v-model="checkedWallpaper" label="壁纸" /></div>
+              <div><el-checkbox v-model="checkedPeople" label="人像" /></div>
+            </el-space>
+          </el-col>
+          <el-col :span="4">
+            <div style="align-items: center;">
+              <el-space wrap size="4px">
+                <el-text style="width: 100px;">高度范围(输入)</el-text>
+                <el-input style="width: 60px;" v-model="imgHeightDis[0]" placeholder="min" />
+                <span>~</span>
+                <el-input style="width: 60px;" v-model="imgHeightDis[1]" placeholder="max" />
+              </el-space>
+              <el-space wrap size="4px">
+                <el-text style="width: 100px;">宽度范围(输入)</el-text>
+                <el-input style="width: 60px;" v-model="imgWidthDis[0]" placeholder="min" />
+                <span>~</span>
+                <el-input style="width: 60px;" v-model="imgWidthDis[1]" placeholder="max" />
+              </el-space>
+            </div>
+          </el-col>
+          <el-col :span="8">
+            <div>
+              <div class="slider-demo-block">
+                <el-text style="width: 100px;">图像高度范围</el-text>
+                <el-slider v-model="imgHeightDis" range :max="8000" />
+              </div>
+              <div class="slider-demo-block">
+                <el-text style="width: 100px;">图像宽度范围</el-text>
+                <el-slider v-model="imgWidthDis" range :max="8000" />
+              </div>
+            </div>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="21">
+            <el-select v-model="value" multiple filterable reserve-keyword placeholder="Please enter a keyword"
+              default-first-option>
+              <!-- remote :remote-method="remoteMethod" :loading="loading" -->
+              <el-option v-for="item in list" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-col>
+          <el-col :span="3">
+            <el-button type="success">确认</el-button>
+            <el-button type="primary" @click="clear_tag_selection">清空</el-button>
+          </el-col>
+        </el-row>
+      </el-collapse-item>
+    </el-collapse>
     <div class="methods is-flex">
       <div class="field has-addons">
         <p class="control">
           <button type="button" class="button is-primary" :class="{ ' is-active': !state.options.inline }"
             @click="toggleInline(false)">
-            Modal
+            预览模式
           </button>
         </p>
         <p class="control">
           <button type="button" class="button is-primary" :class="{ ' is-active': state.options.inline }"
             @click="toggleInline(true)">
-            Inline
+            处理模式
           </button>
         </p>
       </div>
-      <button type="button" class="button" :disabled="state.images.length === sourceImages.length" @click="add">
-        Add
-      </button>
-      <button type="button" class="button" :disabled="state.images.length === 1" @click="remove">
-        Remove
-      </button>
-      <button type="button" class="button" @click="fetchImageUrlFromServer()">
-        更新图像
-      </button>
-      <el-pagination v-model:current-page="currentPage" :page-size=pageSize background layout="prev, pager, next"
-        :total=imageTotalCount />
+      <div>
+        <button type="button" class="button" :disabled="state.images.length === sourceImages.length" @click="add">
+          添加一张图片
+        </button>
+        <button type="button" class="button" :disabled="state.images.length === 1" @click="remove">
+          移除一张图片
+        </button>
+        <button type="button" class="button" @click="fetchImageUrlFromServer()">
+          更新图像
+        </button>
+        <button type="button" class="button" @click="isOptionShow = !isOptionShow">预览区显示控制</button>
+      </div>
+
+      <el-pagination v-model:current-page="currentPage" :page-size="pageSize" background layout="prev, pager, next"
+        :total="imageTotalCount" />
     </div>
     <div class="methods is-flex">
       <template v-if="state.options.inline">
@@ -272,57 +400,15 @@ function toggleInline(inline: boolean) {
           <div class="control">
             <span class="button is-static">View</span>
           </div>
-          <!-- <div class="control">
-              <input
-                v-model.number="state.form.view"
-                class="input"
-                type="text"
-                @keyup="view"
-              />
-            </div> -->
         </div>
-        <div class="field has-addons" style="width: 80px">
-          <!-- <div class="control">
-              <input v-model.number="state.form.zoom" class="input" type="text" />
-            </div> -->
+        <div class="field has-addons" style="width: 90px">
           <div class="control">
             <span class="button" @click="zoom()">Zoom</span>
           </div>
         </div>
-        <div class="field has-addons" style="width: 80px">
-          <!-- <div class="control">
-              <input
-                v-model.number="state.form.zoomTo"
-                class="input"
-                type="text"
-              />
-            </div> -->
-          <div class="control">
-            <span class="button" @click="zoomTo">Zoom to</span>
-          </div>
-        </div>
-        <div class="field has-addons" style="width: 80px">
-          <!-- <div class="control">
-              <input
-                v-model.number="state.form.rotate"
-                class="input"
-                type="text"
-              />
-            </div> -->
+        <div class="field has-addons" style="width: 90px">
           <div class="control">
             <span class="button" @click="rotate()">Rotate</span>
-          </div>
-        </div>
-        <div class="field has-addons" style="width: 80px">
-          <!-- <div class="control">
-              <input
-                v-model.number="state.form.rotateTo"
-                class="input"
-                type="text"
-              />
-            </div> -->
-          <div class="control">
-            <span class="button" @click="rotateTo">Rotate to</span>
           </div>
         </div>
         <div class="field has-addons">
@@ -340,101 +426,117 @@ function toggleInline(inline: boolean) {
         <div class="field has-addons">
           <div class="control">
             <button type="button" class="button" @click="rotate(-90)">
-              Rotate Left
+              向左旋转
             </button>
           </div>
           <div class="control">
             <button type="button" class="button" @click="rotate(90)">
-              Rotate Right
+              向右旋转
             </button>
           </div>
         </div>
         <div class="field has-addons">
           <div class="control">
             <button type="button" class="button" @click="scaleX()">
-              Flip Horizontal
+              水平翻转
             </button>
           </div>
           <div class="control">
             <button type="button" class="button" @click="scaleY()">
-              Flip Vertical
+              垂直翻转
             </button>
           </div>
         </div>
         <div class="field has-addons">
           <div class="control">
             <button type="button" class="button" @click="move(-10, 0)">
-              Left
+              左移
             </button>
           </div>
           <div class="control">
             <button type="button" class="button" @click="move(10, 0)">
-              Right
+              右移
             </button>
           </div>
           <div class="control">
             <button type="button" class="button" @click="move(0, -10)">
-              Up
+              上移
             </button>
           </div>
           <div class="control">
             <button type="button" class="button" @click="move(0, 10)">
-              Down
+              下移
             </button>
           </div>
         </div>
         <div class="field has-addons">
           <div class="control">
-            <button type="button" class="button" @click="prev">Prev</button>
+            <button type="button" class="button" @click="prev">前一张</button>
           </div>
           <div class="control">
-            <button type="button" class="button" @click="next">Next</button>
+            <button type="button" class="button" @click="next">后一张</button>
           </div>
           <div class="control">
-            <button type="button" class="button" @click="play">Play</button>
+            <button type="button" class="button" @click="play">区域全屏</button>
           </div>
           <div class="control">
-            <button type="button" class="button" @click="stop">Stop</button>
+            <button type="button" class="button" @click="stop">
+              退出区域全屏
+            </button>
           </div>
         </div>
-        <button type="button" class="button" @click="full">Full</button>
-        <button type="button" class="button" @click="tooltip">Tooltip</button>
-        <button type="button" class="button" @click="reset">Reset</button>
+        <button type="button" class="button" @click="full">网页全屏</button>
+        <button type="button" class="button" @click="tooltip">
+          显示缩放比例
+        </button>
+        <button type="button" class="button" @click="reset">复原</button>
+        <button type="button" class="button" @click="image_detail">图像详情</button>
       </template>
       <template v-else>
-        <button type="button" class="button" @click="show">Show</button>
+        <button type="button" class="button" @click="show">网页全屏</button>
       </template>
     </div>
-    <div class="tile is-ancestor">
-      <div class="tile is-2 is-vertical is-parent">
-        <div class="tile is-child">
-          <nav class="panel options-panel">
-            <p class="panel-heading">Options</p>
-            <div v-for="item of state.toggleOptions" :key="item" class="panel-block">
-              <label class="checkbox">
-                <input v-model="state.options[item]" type="checkbox" name="button" />
-                {{ item }}
-              </label>
-            </div>
-          </nav>
-        </div>
-      </div>
-      <div class="tile is-10 is-vertical is-parent">
-        <div class="viewer-wrapper">
-          <ViewerComponent id="ViewerComponent1" ref="viewer" :options="state.options" :images="state.images" rebuild
-            class="viewer" @inited="inited">
-            <template #default="scope">
-              <figure class="images">
-                <div v-for="{ source, thumbnail, title } in scope.images" :key="source" class="image-wrapper">
-                  <img class="image" :src="thumbnail" :data-source="source" :alt="title" />
+    <template v-if="!state.options.inline">
+      <div class="tile is-ancestor">
+        <template v-if="isOptionShow">
+          <div class="tile is-2 is-vertical is-parent">
+            <div class="tile is-child">
+              <nav class="panel options-panel">
+                <p class="panel-heading">Options</p>
+                <div v-for="item of state.toggleOptions" :key="item" class="panel-block">
+                  <label class="checkbox">
+                    <input v-model="state.options[item]" type="checkbox" name="button" />
+                    {{ item }}
+                  </label>
                 </div>
-              </figure>
-              <!-- <p><strong>Options: </strong>{{ scope.options }}</p> -->
-            </template>
-          </ViewerComponent>
+              </nav>
+            </div>
+          </div>
+        </template>
+        <div class="tile is-10 is-vertical is-parent">
+          <div class="viewer-wrapper">
+            <ViewerComponent id="ViewerComponent1" ref="viewer" :options="state.options" :images="state.images" rebuild
+              class="viewer" @inited="inited">
+              <template #default="scope">
+                <figure class="images">
+                  <div v-for="{ source, thumbnail, title } in scope.images" :key="source" class="image-wrapper">
+                    <img class="image" :src="thumbnail" :data-source="source" :alt="title" />
+                  </div>
+                </figure>
+                <template v-if="isOptionShow">
+                  <p><strong>Options: </strong>{{ scope.options }}</p>
+                </template>
+              </template>
+            </ViewerComponent>
+          </div>
         </div>
       </div>
-    </div>
+    </template>
+    <template v-else>
+      <div v-for="{ source, thumbnail, title } in sourceImages" :key="source" class="image-wrapper">
+        <ImageInfoBlock style="height:250px;width:250px" :thumbnail="thumbnail" :title="title" :source="source"/>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -491,5 +593,53 @@ function toggleInline(inline: boolean) {
       }
     }
   }
+}
+
+.dis-input-block {
+  display: inline-flex;
+  align-items: center;
+}
+
+.slider-demo-block {
+  display: flex;
+  align-items: center;
+  margin-right: 20px;
+}
+
+.slider-demo-block .el-slider {
+  margin-top: 0;
+  margin-left: 12px;
+}
+
+.slider-demo-block .demonstration {
+  font-size: 14px;
+  color: var(--el-text-color-secondary);
+  line-height: 44px;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 0;
+}
+
+.slider-demo-block .demonstration+.el-slider {
+  flex: 0 0 70%;
+}
+
+.el-row {
+  margin-bottom: 20px;
+}
+
+.el-row:last-child {
+  margin-bottom: 0;
+}
+
+.el-col {
+  border-radius: 4px;
+}
+
+.grid-content {
+  border-radius: 4px;
+  min-height: 36px;
 }
 </style>

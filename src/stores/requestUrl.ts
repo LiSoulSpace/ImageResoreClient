@@ -1,5 +1,7 @@
 import { defineStore } from "pinia";
-
+/**
+ * 后端请求url的整合Store
+ */
 export const requestUrlStore = defineStore("requestUrl", () => {
   const domain = "http://localhost:8080";
   const login = "/user/login";
@@ -8,18 +10,25 @@ export const requestUrlStore = defineStore("requestUrl", () => {
   const sig = "/user/sig";
   const logout = "/user/logout";
 
+  //图像上传uri
   const uploadImage = "/restore/imageInfo/uploadImage";
+  //分页获取图像路径uri
   const getImagePathPage = "/restore/imageInfo/getImagePathPage";
 
   const getImagePathById = "/restore/imageInfo/getImagePathById";
   const getImageInfoPage = "/restore/imageInfo/getImageInfoPage";
 
-  const getImageCountByUserId = "/erstore/imageInfo/getImageCountByUserId";
+  const getImageCountByUserId = "/restore/imageInfo/getImageCountByUserId";
 
   const getImageInfoPageByUserId =
     "/restore/imageInfo/getImageInfoPageByUserId";
-    
-  const getPublicImageCount = "/restore/imageInfo/getPublicImageCount"
+
+  const getImageInfoByMd5 = "/restore/imageInfo/getImageInfoByMd5";
+  const getImageInfoByMd5Url = (imageMd5: string) => {
+    return `${domain}${getImageInfoByMd5}?imageMd5=${imageMd5}`;
+  };
+
+  const getPublicImageCount = "/restore/imageInfo/getPublicImageCount";
 
   const getDomain = () => {
     return domain;
@@ -29,9 +38,9 @@ export const requestUrlStore = defineStore("requestUrl", () => {
     return `${domain}${userupdate}?userId=${userId}&nickName=${nickName}&avatar=${avatar}`;
   };
 
-  const loginUrl = ()=>{
-    return `${domain}${login}`
-  }
+  const loginUrl = () => {
+    return `${domain}${login}`;
+  };
 
   const sigUrl = (userId: number) => {
     return `${domain}${sig}?userId=${userId}`;
@@ -55,17 +64,21 @@ export const requestUrlStore = defineStore("requestUrl", () => {
     return `${domain}${getImagePathById}?id=${imageId}`;
   };
   const getImageCountByUserIdUrl = (userId: number) => {
-      return `${domain}${getImageCountByUserId}?userId=${userId}`;
+    return `${domain}${getImageCountByUserId}?userId=${userId}`;
   };
-  const getPublicImageCountUrl = () =>{
-    return `${domain}${getPublicImageCount}`
-  }
+  const getPublicImageCountUrl = () => {
+    return `${domain}${getPublicImageCount}`;
+  };
   const getImageInfoPageByUserIdUrl = (
     userId: number,
     currentPage: number,
     pageSize: number
   ) => {
     return `${domain}${getImageInfoPageByUserId}?currentPage=${currentPage}&pageSize=${pageSize}&userId=${userId}`;
+  };
+
+  const getImageSrcUrl = (imageUri: string) => {
+    return `${domain}${imageUri}`;
   };
 
   return {
@@ -80,6 +93,8 @@ export const requestUrlStore = defineStore("requestUrl", () => {
     getImagePathPageUrl,
     getImageInfoPageUrl,
     getImageCountByUserIdUrl,
-    getPublicImageCountUrl
+    getPublicImageCountUrl,
+    getImageInfoByMd5Url,
+    getImageSrcUrl,
   };
 });

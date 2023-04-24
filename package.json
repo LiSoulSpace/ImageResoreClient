@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.0.10",
+    "@microsoft/tsdoc": "^0.14.2",
     "bulma": "^0.9.4",
     "element-plus": "^2.2.32",
     "pinia": "^2.0.28",

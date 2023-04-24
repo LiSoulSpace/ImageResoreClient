@@ -7,6 +7,7 @@ import { requestHeaderStore } from "@/stores/requestHeader";
 import { requestUrlStore } from "@/stores/requestUrl";
 import { ElMessage, genFileId } from "element-plus";
 import type { UploadInstance, UploadProps, UploadRawFile } from "element-plus";
+import router from "@/router";
 
 VueViewer.setDefaults({
   zIndexInline: 2021,
@@ -24,10 +25,12 @@ const checkedPeople = ref(false);
 const requestUrls = requestUrlStore();
 const requestHeaders = requestHeaderStore();
 const userInfo = userInfoStore();
+const isOptionShow = ref<boolean>(false)
 class ImageData {
   thumbnail: string;
   source: string;
   title: string;
+  md5?: string;
   constructor(source: string, thumbnail: string, title: string) {
     this.source = source;
     this.thumbnail = thumbnail;
@@ -55,13 +58,44 @@ const fetchImageUrlFromServer = () => {
   )
     .then((response) => response.text())
     .then((result) => {
+      console.log(result)
       const imageListJson = JSON.parse(result);
       const imageInfoList = imageListJson["data"];
       const imageInfoListJson = JSON.parse(imageInfoList);
       setSourceImages(imageInfoListJson, "json");
     })
+    .catch((error) => {
+      console.log("error", error)
+      ElMessage({
+        message: `图像信息获取失败\n${error}`,
+        type: "error",
+      });
+    });
+};
+
+//TODO: 修改为用户的图像数量
+const fetchImageTotalCount = () => {
+  const requestOptions: RequestInit = {
+    method: "GET",
+    headers: requestHeaders.getMyHeaders(),
+    redirect: "follow",
+  };
+  fetch(
+    requestUrls.getPublicImageCountUrl(),
+    requestOptions
+  )
+    .then((response) => response.text())
+    .then((result) => {
+      const resultJson = JSON.parse(result);
+      imageTotalCount.value = Number(resultJson['data'])
+      console.log(imageTotalCount.value, imageTotalCount)
+    })
     .catch((error) => console.log("error", error));
 };
+
+watch(currentPage, async (newPageSize, oldQuestion) => {
+  fetchImageUrlFromServer();
+});
 
 const setSourceImages = (imagesInfo: any, infoType: string) => {
   if (infoType == "json") {
@@ -74,6 +108,7 @@ const setSourceImages = (imagesInfo: any, infoType: string) => {
         requestUrls.getDomain() + imagesInfo[i]["imagePath"],
         imagesInfo[i]["imageName"]
       );
+      data.md5 = imagesInfo[i]['imageMd5']
       sourceImages.value.push(data);
     }
   }
@@ -179,11 +214,19 @@ const submitUpload = () => {
     type: "success",
   });
 };
+const clear_tag_selection = () => {
+
+}
+
+// 图像详情 button api
+const image_detail = () => {
+  router.push(`imageinfo/${sourceImages.value[viewer.value.index].md5}`)
+}
 
 const remove = () => {
   state.value.images.pop();
 };
-function zoom(value?: number) {
+const zoom = (value?: number) => {
   viewer.value.zoom(value || state.value.form.zoom);
 }
 function rotate(value?: number) {
@@ -237,6 +280,52 @@ function reset() {
 function toggleInline(inline: boolean) {
   state.value.options.inline = inline;
 }
+
+// 下方内容有关于 多选输入框 用于tag的多选
+interface ListItem {
+  value: string
+  label: string
+}
+
+const list = ref<ListItem[]>([])
+const options = ref<ListItem[]>([])
+const value = ref<string[]>([])
+const loading = ref(false)
+
+onMounted(() => {
+  list.value = states.map((item) => {
+    return { value: `value:${item}`, label: `label:${item}` }
+  })
+})
+
+const remoteMethod = (query: string) => {
+  if (query) {
+    loading.value = true
+    setTimeout(() => {
+      loading.value = false
+      options.value = list.value.filter((item) => {
+        return item.label.toLowerCase().includes(query.toLowerCase())
+      })
+    }, 200)
+  } else {
+    options.value = list.value
+  }
+}
+
+const states = [
+  'Alabama',
+  'Alaska',
+  'Arizona',
+  'Arkansas',
+  'California',
+  'Colorado',
+  'Connecticut',
+  'Delaware',
+  'Florida',
+  'Georgia',
+  'Wisconsin',
+  'Wyoming',
+]
 </script>
 
 <template>
@@ -244,37 +333,52 @@ function toggleInline(inline: boolean) {
     <el-collapse v-model="activeName" accordion>
       <el-collapse-item title="分类选择" name="categorySelectionCollapseItem">
         <el-row>
-          <el-col :span="4">
-            <div style="heigh=">
+          <el-col :span="12">
+            <el-space wrap>
               <div><el-checkbox v-model="checkedWallpaper" label="壁纸" /></div>
               <div><el-checkbox v-model="checkedPeople" label="人像" /></div>
-            </div>
+            </el-space>
           </el-col>
-          <el-col :span="12">
+          <el-col :span="4">
             <div style="align-items: center;">
-              <div class="dis-input-block">
-                <el-text style="width: 220px;">高度范围(输入)</el-text>
-                <el-input v-model="imgHeightDis[0]" placeholder="min" />
-                <el-input v-model="imgHeightDis[1]" placeholder="max" />
-              </div>
-              <div class="dis-input-block">
-                <el-text style="width: 220px;">宽度范围(输入)</el-text>
-                <el-input v-model="imgWidthDis[0]" placeholder="min" />
-                <el-input v-model="imgWidthDis[1]" placeholder="max" />
-              </div>
+              <el-space wrap size="4px">
+                <el-text style="width: 100px;">高度范围(输入)</el-text>
+                <el-input style="width: 60px;" v-model="imgHeightDis[0]" placeholder="min" />
+                <span>~</span>
+                <el-input style="width: 60px;" v-model="imgHeightDis[1]" placeholder="max" />
+              </el-space>
+              <el-space wrap size="4px">
+                <el-text style="width: 100px;">宽度范围(输入)</el-text>
+                <el-input style="width: 60px;" v-model="imgWidthDis[0]" placeholder="min" />
+                <span>~</span>
+                <el-input style="width: 60px;" v-model="imgWidthDis[1]" placeholder="max" />
+              </el-space>
             </div>
           </el-col>
           <el-col :span="8">
             <div>
               <div class="slider-demo-block">
-                <span class="demonstration">图像高度范围</span>
+                <el-text style="width: 100px;">图像高度范围</el-text>
                 <el-slider v-model="imgHeightDis" range :max="8000" />
               </div>
               <div class="slider-demo-block">
-                <span class="demonstration">图像宽度范围</span>
+                <el-text style="width: 100px;">图像宽度范围</el-text>
                 <el-slider v-model="imgWidthDis" range :max="8000" />
               </div>
             </div>
+          </el-col>
+        </el-row>
+        <el-row>
+          <el-col :span="21">
+            <el-select v-model="value" multiple filterable reserve-keyword placeholder="Please enter a keyword"
+              default-first-option>
+              <!-- remote :remote-method="remoteMethod" :loading="loading" -->
+              <el-option v-for="item in list" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-col>
+          <el-col :span="3">
+            <el-button type="success">确认</el-button>
+            <el-button type="primary" @click="clear_tag_selection">清空</el-button>
           </el-col>
         </el-row>
       </el-collapse-item>
@@ -320,6 +424,7 @@ function toggleInline(inline: boolean) {
         <button type="button" class="button" @click="fetchImageUrlFromServer()">
           更新图像
         </button>
+        <button type="button" class="button" @click="isOptionShow = !isOptionShow">预览区显示控制</button>
       </div>
 
       <el-pagination v-model:current-page="currentPage" :page-size="pageSize" background layout="prev, pager, next"
@@ -421,25 +526,28 @@ function toggleInline(inline: boolean) {
           显示缩放比例
         </button>
         <button type="button" class="button" @click="reset">复原</button>
+        <button type="button" class="button" @click="image_detail">图像详情</button>
       </template>
       <template v-else>
         <button type="button" class="button" @click="show">网页全屏</button>
       </template>
     </div>
     <div class="tile is-ancestor">
-      <div class="tile is-2 is-vertical is-parent">
-        <div class="tile is-child">
-          <nav class="panel options-panel">
-            <p class="panel-heading">Options</p>
-            <div v-for="item of state.toggleOptions" :key="item" class="panel-block">
-              <label class="checkbox">
-                <input v-model="state.options[item]" type="checkbox" name="button" />
-                {{ item }}
-              </label>
-            </div>
-          </nav>
+      <template v-if="isOptionShow">
+        <div class="tile is-2 is-vertical is-parent">
+          <div class="tile is-child">
+            <nav class="panel options-panel">
+              <p class="panel-heading">Options</p>
+              <div v-for="item of state.toggleOptions" :key="item" class="panel-block">
+                <label class="checkbox">
+                  <input v-model="state.options[item]" type="checkbox" name="button" />
+                  {{ item }}
+                </label>
+              </div>
+            </nav>
+          </div>
         </div>
-      </div>
+      </template>
       <div class="tile is-10 is-vertical is-parent">
         <div class="viewer-wrapper">
           <ViewerComponent id="ViewerComponent1" ref="viewer" :options="state.options" :images="state.images" rebuild
@@ -450,7 +558,9 @@ function toggleInline(inline: boolean) {
                   <img class="image" :src="thumbnail" :data-source="source" :alt="title" />
                 </div>
               </figure>
-              <p><strong>Options: </strong>{{ scope.options }}</p>
+              <template v-if="isOptionShow">
+                <p><strong>Options: </strong>{{ scope.options }}</p>
+              </template>
             </template>
           </ViewerComponent>
         </div>
@@ -514,7 +624,7 @@ function toggleInline(inline: boolean) {
   }
 }
 
-.dis-input-block{
+.dis-input-block {
   display: inline-flex;
   align-items: center;
 }
