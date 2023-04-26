@@ -37,7 +37,23 @@ export const currentImageStore = defineStore("currentImage", () => {
       this.name = name;
     }
   }
+  const currentPublicPage = ref<number>(1);
+  const currentPublicViewerImageIndex = ref<number>(0);
+  const setCurrentPublicPage = (currentPage: number) => {
+    currentPublicPage.value = currentPage;
+  };
+  const setCurrentPublicViewerImageIndex = (index: number) => {
+    currentPublicViewerImageIndex.value = index;
+  };
 
+  const currentUserPage = ref<number>(1);
+  const currentUserViewerImageIndex = ref<number>(0);
+  const setCurrentUserPage = (currentPage: number) => {
+    currentUserPage.value = currentPage;
+  };
+  const setCurrentUserViewerImageIndex = (index: number) => {
+    currentUserViewerImageIndex.value = index;
+  };
   const currentImageInfo = ref<ImageInfo>(new ImageInfo(""));
   const parseImageInfo = (imageInfoJson: any) => {
     currentImageInfo.value.updateInfo(
@@ -56,10 +72,7 @@ export const currentImageStore = defineStore("currentImage", () => {
       headers: requestHeaders.getMyHeaders(),
       redirect: "follow",
     };
-    fetch(
-      requestUrls.getImageInfoByMd5Url(md5),
-      requestOptions
-    )
+    fetch(requestUrls.getImageInfoByMd5Url(md5), requestOptions)
       .then((response) => response.text())
       .then((result) => {
         console.log(result);
@@ -80,6 +93,14 @@ export const currentImageStore = defineStore("currentImage", () => {
 
   return {
     currentImageInfo,
-    fetchImageInfoByMd5
-  }
+    fetchImageInfoByMd5,
+    currentPublicPage,
+    currentPublicViewerImageIndex,
+    setCurrentPublicPage,
+    setCurrentPublicViewerImageIndex,
+    currentUserPage,
+    currentUserViewerImageIndex,
+    setCurrentUserPage,
+    setCurrentUserViewerImageIndex
+  };
 });

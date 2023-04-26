@@ -5,6 +5,7 @@ import VueViewer, { component, api, Viewer } from "v-viewer";
 import { userInfoStore } from "@/stores/userInfo";
 import { requestHeaderStore } from "@/stores/requestHeader";
 import { requestUrlStore } from "@/stores/requestUrl";
+import { currentImageStore } from "@/stores/currentImage"
 import { ElMessage, genFileId } from "element-plus";
 import router from "@/router";
 import ImageInfoBlock from "./ImageInfoBlock.vue";
@@ -28,6 +29,8 @@ VueViewer.setDefaults({
 onMounted(() => {
   fetchImageTotalCount();
   fetchImageUrlFromServer();
+  currentPage.value = currentImage.currentPublicPage
+  viewer.value.view(currentImage.currentPublicViewerImageIndex)
 });
 
 const activeName = ref("1");
@@ -43,6 +46,7 @@ const imageTotalCount = ref(9);
 const requestUrls = requestUrlStore();
 const requestHeaders = requestHeaderStore();
 const userInfo = userInfoStore();
+const currentImage = currentImageStore()
 const isOptionShow = ref<boolean>(false)
 
 const fetchImageUrlFromServer = () => {
@@ -52,7 +56,7 @@ const fetchImageUrlFromServer = () => {
     redirect: "follow",
   };
   fetch(
-    requestUrls.getImageInfoPageUrl(
+    requestUrls.getImageBaseInfoPageUrl(
       currentPage.value,
       pageSize.value
     ),
@@ -96,6 +100,7 @@ const fetchImageTotalCount = () => {
 
 watch(currentPage, async (newPageSize, oldQuestion) => {
   fetchImageUrlFromServer();
+  currentImage.setCurrentPublicPage(currentPage.value)
 });
 
 const setSourceImages = (imagesInfo: any, infoType: string) => {
@@ -105,8 +110,8 @@ const setSourceImages = (imagesInfo: any, infoType: string) => {
     }
     for (var i = 0; i < imagesInfo.length; i++) {
       const data = new ImageData(
-        requestUrls.getDomain() + imagesInfo[i]["imagePath"],
-        requestUrls.getDomain() + imagesInfo[i]["imagePath"],
+        requestUrls.getDomain() + imagesInfo[i]["sourcePath"],
+        requestUrls.getDomain() + imagesInfo[i]["thumbnailPath"],
         imagesInfo[i]["imageName"]
       );
       data.md5 = imagesInfo[i]['imageMd5']
@@ -195,12 +200,18 @@ const add = () => {
 };
 
 const clear_tag_selection = () => {
-  
+
 }
 
 // 图像详情 button api
 const image_detail = () => {
-  router.push(`imageinfo/${sourceImages.value[viewer.value.index].md5}`)
+  currentImage.setCurrentPublicViewerImageIndex(viewer.value.index)
+  router.push(`/imageinfo/${sourceImages.value[viewer.value.index].md5}`)
+  router.isReady()
+}
+
+const testIndex = (index: number) => {
+  viewer.value.view(3)
 }
 
 const remove = () => {
@@ -396,30 +407,20 @@ const states = [
     </div>
     <div class="methods is-flex">
       <template v-if="state.options.inline">
-        <div class="field has-addons" style="width: 80px">
-          <div class="control">
-            <span class="button is-static">View</span>
-          </div>
-        </div>
-        <div class="field has-addons" style="width: 90px">
-          <div class="control">
-            <span class="button" @click="zoom()">Zoom</span>
-          </div>
-        </div>
-        <div class="field has-addons" style="width: 90px">
-          <div class="control">
-            <span class="button" @click="rotate()">Rotate</span>
-          </div>
-        </div>
         <div class="field has-addons">
           <div class="control">
+            <button type="button" class="button" @click="testIndex(3)">
+              跳转到第三张图片
+            </button>
+          </div>
+          <div class="control">
             <button type="button" class="button" @click="zoom(0.5)">
-              Zoom In
+              放大
             </button>
           </div>
           <div class="control">
             <button type="button" class="button" @click="zoom(-0.5)">
-              Zoom Out
+              缩小
             </button>
           </div>
         </div>
@@ -496,47 +497,40 @@ const states = [
         <button type="button" class="button" @click="show">网页全屏</button>
       </template>
     </div>
-    <template v-if="!state.options.inline">
-      <div class="tile is-ancestor">
-        <template v-if="isOptionShow">
-          <div class="tile is-2 is-vertical is-parent">
-            <div class="tile is-child">
-              <nav class="panel options-panel">
-                <p class="panel-heading">Options</p>
-                <div v-for="item of state.toggleOptions" :key="item" class="panel-block">
-                  <label class="checkbox">
-                    <input v-model="state.options[item]" type="checkbox" name="button" />
-                    {{ item }}
-                  </label>
-                </div>
-              </nav>
-            </div>
-          </div>
-        </template>
-        <div class="tile is-10 is-vertical is-parent">
-          <div class="viewer-wrapper">
-            <ViewerComponent id="ViewerComponent1" ref="viewer" :options="state.options" :images="state.images" rebuild
-              class="viewer" @inited="inited">
-              <template #default="scope">
-                <figure class="images">
-                  <div v-for="{ source, thumbnail, title } in scope.images" :key="source" class="image-wrapper">
-                    <img class="image" :src="thumbnail" :data-source="source" :alt="title" />
-                  </div>
-                </figure>
-                <template v-if="isOptionShow">
-                  <p><strong>Options: </strong>{{ scope.options }}</p>
-                </template>
-              </template>
-            </ViewerComponent>
+    <div class="tile is-ancestor">
+      <template v-if="isOptionShow">
+        <div class="tile is-2 is-vertical is-parent">
+          <div class="tile is-child">
+            <nav class="panel options-panel">
+              <p class="panel-heading">Options</p>
+              <div v-for="item of state.toggleOptions" :key="item" class="panel-block">
+                <label class="checkbox">
+                  <input v-model="state.options[item]" type="checkbox" name="button" />
+                  {{ item }}
+                </label>
+              </div>
+            </nav>
           </div>
         </div>
+      </template>
+      <div class="tile is-vertical is-parent">
+        <div class="viewer-wrapper">
+          <ViewerComponent id="ViewerComponent1" ref="viewer" :options="state.options" :images="state.images" rebuild
+            class="viewer" @inited="inited">
+            <template #default="scope">
+              <figure class="images">
+                <div v-for="{ source, thumbnail, title } in scope.images" :key="source" class="image-wrapper">
+                  <img class="image" :src="thumbnail" :data-source="source" :alt="title" />
+                </div>
+              </figure>
+              <template v-if="isOptionShow">
+                <p><strong>Options: </strong>{{ scope.options }}</p>
+              </template>
+            </template>
+          </ViewerComponent>
+        </div>
       </div>
-    </template>
-    <template v-else>
-      <div v-for="{ source, thumbnail, title } in sourceImages" :key="source" class="image-wrapper">
-        <ImageInfoBlock style="height:250px;width:250px" :thumbnail="thumbnail" :title="title" :source="source"/>
-      </div>
-    </template>
+    </div>
   </div>
 </template>
 

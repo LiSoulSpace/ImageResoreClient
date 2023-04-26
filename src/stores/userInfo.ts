@@ -50,9 +50,9 @@ export const userInfoStore = defineStore("userInfo", () => {
   };
 
   const login = (resultJson: any) => {
-    userInfo.value.userId = resultJson["data"]["userId"]
-    userInfo.value.username = resultJson["data"]["nickName"]
-    userInfo.value.avatar_image_path = resultJson["data"]["avatar"]
+    userInfo.value.userId = resultJson["data"]["userId"];
+    userInfo.value.username = resultJson["data"]["nickName"];
+    userInfo.value.avatar_image_path = resultJson["data"]["avatar"];
     requestHeaders.setHeaderKeyValue(
       "Authorization",
       "Bearer" + resultJson["data"]["token"]
@@ -61,5 +61,9 @@ export const userInfoStore = defineStore("userInfo", () => {
     isLogin.value = true;
   };
 
-  return { isLogin, userInfo, setUserInfo, login };
+  const logout = () => {
+    isLogin.value = false;
+  };
+
+  return { isLogin, userInfo, setUserInfo, login, logout };
 });

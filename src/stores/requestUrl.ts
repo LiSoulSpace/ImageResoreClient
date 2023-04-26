@@ -23,6 +23,8 @@ export const requestUrlStore = defineStore("requestUrl", () => {
   const getImageInfoPageByUserId =
     "/restore/imageInfo/getImageInfoPageByUserId";
 
+  const getImageBaseInfoPage = "/restore/imageInfo/getImageBaseInfoPage";
+
   const getImageInfoByMd5 = "/restore/imageInfo/getImageInfoByMd5";
   const getImageInfoByMd5Url = (imageMd5: string) => {
     return `${domain}${getImageInfoByMd5}?imageMd5=${imageMd5}`;
@@ -60,6 +62,9 @@ export const requestUrlStore = defineStore("requestUrl", () => {
   const getImageInfoPageUrl = (currentPage: number, pageSize: number) => {
     return `${domain}${getImageInfoPage}?currentPage=${currentPage}&pageSize=${pageSize}`;
   };
+  const getImageBaseInfoPageUrl = (currentPage: number, pageSize: number) => {
+    return `${domain}${getImageBaseInfoPage}?currentPage=${currentPage}&pageSize=${pageSize}`;
+  };
   const getImagePathByIdUrl = (imageId: number) => {
     return `${domain}${getImagePathById}?id=${imageId}`;
   };
@@ -96,5 +101,6 @@ export const requestUrlStore = defineStore("requestUrl", () => {
     getPublicImageCountUrl,
     getImageInfoByMd5Url,
     getImageSrcUrl,
+    getImageBaseInfoPageUrl,
   };
 });

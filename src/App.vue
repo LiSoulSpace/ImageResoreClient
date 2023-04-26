@@ -37,7 +37,7 @@ const checkIsLogin = () => {
 };
 
 const routerTo = (pathT: string) => {
-  router.push({path:pathT});
+  router.push({ path: pathT });
   // if (pathT == "/imageshow") {
   //   if (checkIsLogin()) {
   //     router.push(pathT);
@@ -59,6 +59,13 @@ const direction = ref("ltr");
 const pageHeaderBack = () => {
   router.back()
 };
+
+const logout = () => {
+  userInfo.logout()
+}
+const redirectToLogin = () => {
+  router.push({ path: '/login' });
+}
 </script>
 
 <template>
@@ -69,7 +76,9 @@ const pageHeaderBack = () => {
         <el-page-header :icon="null" title="图像存储修复平台">
           <template #content>
             <el-button style="margin-left: 16px" @click="drawer = true">
-              <el-icon><Menu /></el-icon>
+              <el-icon>
+                <Menu />
+              </el-icon>
             </el-button>
           </template>
           <template #extra>
@@ -83,8 +92,13 @@ const pageHeaderBack = () => {
               </span>
               <!-- <span> <el-tag>Default</el-tag></span> -->
               <span class="flex items-center">
-                <el-button>Print</el-button>
-                <el-button type="primary" class="ml-2">Edit</el-button>
+                <!-- <el-button @click="">Print</el-button> -->
+                <template v-if="userInfo.isLogin">
+                  <el-button type="primary" @click="logout">登出</el-button>
+                </template>
+                <template v-else>
+                  <el-button type="primary" @click="redirectToLogin">登录</el-button>
+                </template>
               </span>
             </div>
           </template>
