@@ -62,6 +62,7 @@ const pageHeaderBack = () => {
 
 const logout = () => {
   userInfo.logout()
+  router.push("/login")
 }
 const redirectToLogin = () => {
   router.push({ path: '/login' });
@@ -129,7 +130,12 @@ const redirectToLogin = () => {
                 <User />
               </el-icon>
               <template #title>
-                <div to="/login">登录</div>
+                <template v-if="!userInfo.isLogin">
+                  <div to="/login">登录</div>
+                </template>
+                <template v-else>
+                  <div to="/login">个人信息</div>
+                </template>
               </template>
             </el-menu-item>
             <el-menu-item index="4" @click="routerTo('/about')">
@@ -138,6 +144,14 @@ const redirectToLogin = () => {
                 <div to="/about">关于</div>
               </template>
             </el-menu-item>
+            <template v-if="userInfo.isAdmin">
+              <el-menu-item index="5" @click="routerTo('/admin')">
+                <el-icon><icon-menu /></el-icon>
+                <template #title>
+                  <div to="/admin">管理员界面</div>
+                </template>
+              </el-menu-item>
+            </template>
           </el-menu>
         </el-drawer>
         <el-container>

@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { userInfoStore } from "@/stores/userInfo";
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -25,7 +27,12 @@ const router = createRouter({
     {
       path: "/imageinfo/:imagemd5",
       name: "imageInfo",
-      component: () => import("../views/ImageInfo.vue"),
+      component: () => import("../views/ImageInfoSingle.vue"),
+    },
+    {
+      path: "/admin",
+      name: "admin",
+      component: () => import("../views/AdminView.vue"),
     },
   ],
 });

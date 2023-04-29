@@ -32,6 +32,7 @@ export const userInfoStore = defineStore("userInfo", () => {
     )
   );
   const isLogin = ref(false);
+  const isAdmin = ref(false);
   const setUserInfo = (
     userId: number,
     username: string,
@@ -57,13 +58,26 @@ export const userInfoStore = defineStore("userInfo", () => {
       "Authorization",
       "Bearer" + resultJson["data"]["token"]
     );
-    console.log(requestHeaders.getMyHeaders().get("Authorization"));
     isLogin.value = true;
+    checkAdmin();
+  };
+
+  const checkAdmin = () => {
+    fetch(requestUrls.checkIsAdminByUserIdUrl(userInfo.value.userId))
+      .then((response) => response.text())
+      .then((result) => {
+        console.log(result);
+        const resultJson = JSON.parse(result);
+        const isAdminT = Boolean(resultJson["data"]);
+        if (isAdminT) isAdmin.value = true;
+      })
+      .catch((error) => console.log("error", error));
   };
 
   const logout = () => {
     isLogin.value = false;
+    isAdmin.value = false;
   };
 
-  return { isLogin, userInfo, setUserInfo, login, logout };
+  return { isLogin, isAdmin, userInfo, setUserInfo, login, logout };
 });

@@ -4,39 +4,41 @@ import { requestHeaderStore } from "./requestHeader";
 import { requestUrlStore } from "./requestUrl";
 import { ElMessage } from "element-plus";
 
+export class ImageInfo {
+  id?: number;
+  src?: string;
+  width?: number;
+  height?: number;
+  description?: string;
+  name?: string;
+  md5: string;
+  type?: string;
+  constructor(md5: string) {
+    this.md5 = md5;
+  }
+  updateInfo(
+    id?: number,
+    name?: string,
+    src?: string,
+    type?: string,
+    width?: number,
+    height?: number,
+    description?: string
+  ) {
+    this.id = id;
+    this.src = src;
+    this.type = type;
+    this.width = width;
+    this.height = height;
+    this.description = description;
+    this.name = name;
+  }
+}
+
 export const currentImageStore = defineStore("currentImage", () => {
   const requestHeaders = requestHeaderStore();
   const requestUrls = requestUrlStore();
-  class ImageInfo {
-    id?: number;
-    src?: string;
-    width?: number;
-    height?: number;
-    description?: string;
-    name?: string;
-    md5: string;
-    type?: string;
-    constructor(md5: string) {
-      this.md5 = md5;
-    }
-    updateInfo(
-      id?: number,
-      name?: string,
-      src?: string,
-      type?: string,
-      width?: number,
-      height?: number,
-      description?: string
-    ) {
-      this.id = id;
-      this.src = src;
-      this.type = type;
-      this.width = width;
-      this.height = height;
-      this.description = description;
-      this.name = name;
-    }
-  }
+  
   const currentPublicPage = ref<number>(1);
   const currentPublicViewerImageIndex = ref<number>(0);
   const setCurrentPublicPage = (currentPage: number) => {

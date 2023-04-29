@@ -9,6 +9,7 @@ export const requestUrlStore = defineStore("requestUrl", () => {
   const userupdate = "/user/update";
   const sig = "/user/sig";
   const logout = "/user/logout";
+  const checkIsAdminByUserId = "/user/checkIsAdminByUserId";
 
   //图像上传uri
   const uploadImage = "/restore/imageInfo/uploadImage";
@@ -17,6 +18,7 @@ export const requestUrlStore = defineStore("requestUrl", () => {
 
   const getImagePathById = "/restore/imageInfo/getImagePathById";
   const getImageInfoPage = "/restore/imageInfo/getImageInfoPage";
+  const getImageInfoCount = "/restore/imageInfo/getImageInfoCount";
 
   const getImageCountByUserId = "/restore/imageInfo/getImageCountByUserId";
 
@@ -56,11 +58,18 @@ export const requestUrlStore = defineStore("requestUrl", () => {
     return `${domain}${uploadImage}?userId=${userId}`;
   };
 
+  const checkIsAdminByUserIdUrl = (userId: number) => {
+    return `${domain}${checkIsAdminByUserId}?userId=${userId}`;
+  };
+
   const getImagePathPageUrl = (currentPage: number, pageSize: number) => {
     return `${domain}${getImagePathPage}?currentPage=${currentPage}&pageSize=${pageSize}`;
   };
   const getImageInfoPageUrl = (currentPage: number, pageSize: number) => {
     return `${domain}${getImageInfoPage}?currentPage=${currentPage}&pageSize=${pageSize}`;
+  };
+  const getImageInfoCountUrl = () => {
+    return `${domain}${getImageInfoCount}`;
   };
   const getImageBaseInfoPageUrl = (currentPage: number, pageSize: number) => {
     return `${domain}${getImageBaseInfoPage}?currentPage=${currentPage}&pageSize=${pageSize}`;
@@ -93,10 +102,12 @@ export const requestUrlStore = defineStore("requestUrl", () => {
     logoutUrl,
     loginUrl,
     uploadImageUrl,
+    checkIsAdminByUserIdUrl,
     getImagePathByIdUrl,
     getImageInfoPageByUserIdUrl,
     getImagePathPageUrl,
     getImageInfoPageUrl,
+    getImageInfoCountUrl,
     getImageCountByUserIdUrl,
     getPublicImageCountUrl,
     getImageInfoByMd5Url,
