@@ -3,7 +3,7 @@ import { requestUrlStore } from "@/stores/requestUrl";
 import { userInfoStore } from "@/stores/userInfo";
 import { computed, ref, onMounted, type ComputedRef, type Ref, watch } from "vue";
 import { requestHeaderStore } from "../stores/requestHeader";
-import { ImageInfo } from "@/stores/currentImage"
+import { ImageInfo, TagInfo } from "@/stores/currentImage"
 import { ElMessage } from "element-plus";
 const loginForm = ref({ username: "", password: "" });
 const store = requestHeaderStore();
@@ -17,7 +17,7 @@ const requestOptions: RequestInit = {
 };
 const requestHeaders = requestHeaderStore();
 onMounted(() => {
-  initTableImageData()
+  initTableData()
   console.log("Login View : initTableImageData Over")
 })
 
@@ -64,17 +64,18 @@ const login = () => {
     .then((result) => {
       const resultJson = JSON.parse(result);
       userInfo.login(resultJson)
-      initTableImageData()
+      initTableData()
     })
     .catch((error) => console.log("error", error));
 };
 
 const tableImageData: Ref<ImageInfo[]> = ref([])
-const initTableImageData = () => {
+const tableTagData: Ref<TagInfo[]> = ref([])
+const initTableData = () => {
   if (userInfo.isLogin) {
     fetchUserImageInfoCount()
     fetchUserImageInfos()
-    console.log(tableImageData)
+    fetchTagsUser()
   }
 }
 const currentPage: Ref<number> = ref(1);
@@ -109,6 +110,32 @@ const fetchUserImageInfos = () => {
     });
 }
 
+const fetchTagsUser = () => {
+  const requestOptions: RequestInit = {
+    method: "GET",
+    headers: requestHeaders.getMyHeaders(),
+    redirect: "follow",
+  };
+  fetch(requestUrls.getTagsByCreatorIdUrl(
+    userInfo.userInfo.userId,
+  ), requestOptions)
+    .then((response) => response.text())
+    .then((result) => {
+      console.log(result);
+      const resultJson = JSON.parse(result);
+      const tagInfos = resultJson["data"];
+      const tagInfosJson = JSON.parse(tagInfos);
+      parseUserTagInfo(tagInfosJson)
+    })
+    .catch((error) => {
+      console.log("error", error);
+      ElMessage({
+        message: `标签信息获取失败\n${error}`,
+        type: "error",
+      });
+    });
+}
+
 const parseUserImageInfo = (imagesInfo: any) => {
   for (var i = tableImageData.value.length; i > 0; i--) {
     tableImageData.value.pop();
@@ -117,6 +144,23 @@ const parseUserImageInfo = (imagesInfo: any) => {
     const data = new ImageInfo(imagesInfo[i]["imageMd5"]);
     tableImageData.value.push(data);
     fetchImageInfoByMd5(tableImageData, i)
+  }
+}
+
+const parseUserTagInfo = (tagInfo: any) => {
+  for (var i = tableTagData.value.length; i > 0; i--) {
+    tableTagData.value.pop()
+  }
+  for (var i = 0; i < tagInfo.length; i++) {
+    const tagI = tagInfo[i];
+    const data = new TagInfo(tagI["id"],
+      tagI["tagName"],
+      tagI["tagNameAlias"],
+      tagI["isPublicTag"],
+      tagI["isMainTag"],
+      tagI["tagCreatorId"]
+    )
+    tableTagData.value.push(data);
   }
 }
 
@@ -160,6 +204,12 @@ const handleImageEdit = (index: number, row: ImageInfo) => {
 const handleImageDelete = (index: number, row: ImageInfo) => {
   console.log(index, row)
 }
+const handleTagEdit = (index: number, row: ImageInfo) => {
+  console.log(index, row)
+}
+const handleTagDelete = (index: number, row: ImageInfo) => {
+  console.log(index, row)
+}
 </script>
 
 <template>
@@ -198,32 +248,57 @@ const handleImageDelete = (index: number, row: ImageInfo) => {
     </el-row>
     <el-divider />
     <template v-if="userInfo.isLogin">
-      <el-row class="row-bg">
-        <el-col :span="18"></el-col>
-        <el-col :span="6">
-          <el-pagination style="width:100%;margin:auto;" v-model:current-page="currentPage" :page-size="pageSize"
-            background layout="prev, pager, next" :total="imageTotalCount" />
-        </el-col>
-      </el-row>
+      <el-tabs type="border-card">
+        <el-tab-pane label="个人图像信息">
+          <el-row class="row-bg">
+            <el-col :span="18"></el-col>
+            <el-col :span="6">
+              <el-pagination style="width:100%;margin:auto;" v-model:current-page="currentPage" :page-size="pageSize"
+                background layout="prev, pager, next" :total="imageTotalCount" />
+            </el-col>
+          </el-row>
+          <el-table :data="filterImageData" style="width: 100%">
+            <el-table-column min-width="40px" label="图像id" prop="id" />
+            <el-table-column label="图像名字" prop="name" />
+            <el-table-column min-width="40px" label="宽度" prop="width" />
+            <el-table-column min-width="40px" label="高度" prop="height" />
+            <el-table-column label="描述" prop="description" />
+            <el-table-column label="图像地址" prop="src" />
+            <el-table-column label="md5" prop="md5" />
+            <el-table-column align="right">
+              <template #header>
+                <el-input v-model="searchImage" size="small" placeholder="Type to search" />
+              </template>
+              <template #default="scope">
+                <el-button size="small" @click="handleImageEdit(scope.$index, scope.row)">Edit</el-button>
+                <el-button size="small" type="danger"
+                  @click="handleImageDelete(scope.$index, scope.row)">Delete</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+        <el-tab-pane label="个人标签信息">
+          <el-table :data="tableTagData" style="width: 100%">
+            <el-table-column min-width="40px" label="标签id" prop="id" />
+            <el-table-column label="标签名字" prop="tagName" />
+            <el-table-column label="标签别名" prop="tagNameAlias" />
+            <el-table-column label="是否为公共标签" prop="isPublicTag" />
+            <el-table-column label="是否为主要标签" prop="isMainTag" />
+            <el-table-column align="right">
+              <template #header>
+                <el-input v-model="searchImage" size="small" placeholder="Type to search" />
+              </template>
+              <template #default="scope">
+                <el-button size="small" @click="handleTagEdit(scope.$index, scope.row)">Edit</el-button>
+                <el-button size="small" type="danger"
+                  @click="handleTagDelete(scope.$index, scope.row)">Delete</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+        <!-- <el-tab-pane label="Role">Role</el-tab-pane> -->
+      </el-tabs>
 
-      <el-table :data="filterImageData" style="width: 100%">
-        <el-table-column min-width="40px" label="图像id" prop="id" />
-        <el-table-column label="图像名字" prop="name" />
-        <el-table-column min-width="40px" label="宽度" prop="width" />
-        <el-table-column min-width="40px" label="高度" prop="height" />
-        <el-table-column label="描述" prop="description" />
-        <el-table-column label="图像地址" prop="src" />
-        <el-table-column label="md5" prop="md5" />
-        <el-table-column align="right">
-          <template #header>
-            <el-input v-model="searchImage" size="small" placeholder="Type to search" />
-          </template>
-          <template #default="scope">
-            <el-button size="small" @click="handleImageEdit(scope.$index, scope.row)">Edit</el-button>
-            <el-button size="small" type="danger" @click="handleImageDelete(scope.$index, scope.row)">Delete</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
     </template>
   </div>
 </template>

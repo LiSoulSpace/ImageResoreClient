@@ -1,15 +1,14 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from "vue-router";
 import { onMounted, ref, type Ref } from "vue";
-import { currentImageStore, ImageInfo } from "@/stores/currentImage";
+import { currentImageStore, ImageInfo, TagInfo } from "@/stores/currentImage";
 import { requestUrlStore } from "@/stores/requestUrl";
 import { requestHeaderStore } from "@/stores/requestHeader";
 import { ElMessage } from "element-plus";
 import { userInfoStore } from "@/stores/userInfo";
-import { TagInfo } from "@/stores/currentImage";
-import router from "@/router";
 const route = useRoute();
 const imagemd5 = String(route.params.imagemd5);
+const restoreType = String(route.params.type)
 const currentImage = currentImageStore();
 const requestUrls = requestUrlStore();
 const requestHeaders = requestHeaderStore();
@@ -26,7 +25,6 @@ onMounted(() => {
   fetchImageInfoByMd5(imagemd5);
   fetchImgUserRelation();
   fetchTagsByImageMd5(imagemd5);
-  fetchTagsPublic();
 });
 
 const parseImageInfo = (imageInfoJson: any) => {
@@ -72,45 +70,6 @@ const fetchImgUserRelation = () => {
     });
 };
 
-const fetchTagsByImageMd5 = (md5: string) => {
-  const requestOptions: RequestInit = {
-    method: "GET",
-    headers: requestHeaders.getMyHeaders(),
-    redirect: "follow",
-  };
-  fetch(requestUrls.getTagsByImageMd5Url(md5), requestOptions)
-    .then((response) => response.text())
-    .then((result) => {
-      console.log(result);
-      const resultJson = JSON.parse(result);
-      const tagInfoData = resultJson["data"];
-      const tagInfoJson = JSON.parse(tagInfoData);
-      for (var i = tags.value.length; i > 0; i--) {
-        tags.value.pop();
-      }
-      for (var i = 0; i < tagInfoJson.length; i++) {
-        const tag = tagInfoJson[i];
-        tags.value.push(
-          new TagInfo(
-            tag["id"],
-            tag["tagName"],
-            tag["tagNameAlias"],
-            tag["isPublicTag"],
-            tag["isMainTag"],
-            tag["tagCreatorId"]
-          )
-        );
-      }
-      console.log(tags.value);
-    })
-    .catch((error) => {
-      console.log("error", error);
-      ElMessage({
-        message: `图像信息获取失败\n${error}`,
-        type: "error",
-      });
-    });
-};
 
 const fetchImageInfoByMd5 = (md5: string) => {
   const requestOptions: RequestInit = {
@@ -193,7 +152,6 @@ const imageDeblur = () => {
 
       if (resultJson["code"] == 0) {
         const result = resultJson["data"]
-        router.push(`/imageRestore/deblur/${imagemd5}`)
       } else {
         fetch(
           requestUrls.imageRestoreByIdUrl(pageImage.value.id),
@@ -218,93 +176,15 @@ const imageColorize = () => {
     headers: requestHeaders.getMyHeaders(),
     redirect: "follow",
   };
-  fetch(requestUrls.getImgDeblurByIdUrl(pageImage.value.id), requestOptions)
-    .then((response) => response.text())
-    .then((result) => {
-      const resultJson = JSON.parse(result);
-
-      if (resultJson["code"] == 0) {
-        const result = resultJson["data"]
-        router.push(`/imageRestore/colorize/${imagemd5}`)
-      } else {
-        fetch(requestUrls.imageColorizeByIdUrl(pageImage.value.id), requestOptions)
-          .then((response) => response.text())
-          .then((result) => {
-            const resultJson = JSON.parse(result);
-            const tagInfosJSON = resultJson["data"];
-          })
-          .catch((error) => console.log("error", error));
-      }
-    })
-    .catch((error) => console.log("error", error));
-
-};
-
-const confirmDeleteTag = (tagId: number) => {
-  //TODO: 删除图像对应的标签
-};
-
-const AddTagForImage = () => {
-  console.log("tagIdToAdd : ", tagIdToAdd.value);
-  //TODO 为图像添加标签
-  fetchAddTagForImage();
-};
-
-const fetchAddTagForImage = () => {
-  const requestOptions: RequestInit = {
-    method: "GET",
-    headers: requestHeaders.getMyHeaders(),
-    redirect: "follow",
-  };
-  fetch(
-    requestUrls.saveTagImageReUrl(tagIdToAdd.value, pageImage.value.id),
-    requestOptions
-  )
+  fetch(requestUrls.imageColorizeByIdUrl(pageImage.value.id), requestOptions)
     .then((response) => response.text())
     .then((result) => {
       const resultJson = JSON.parse(result);
       const tagInfosJSON = resultJson["data"];
-      fetchTagsByImageMd5(imagemd5);
-      fetchTagsPublic();
     })
     .catch((error) => console.log("error", error));
 };
 
-const fetchTagsPublic = () => {
-  const requestOptions: RequestInit = {
-    method: "GET",
-    headers: requestHeaders.getMyHeaders(),
-    redirect: "follow",
-  };
-  fetch(requestUrls.getPublicTagsUrl(), requestOptions)
-    .then((response) => response.text())
-    .then((result) => {
-      const resultJson = JSON.parse(result);
-      const tagInfosJSON = resultJson["data"];
-      while (publicTagList.value.length > 0) {
-        publicTagList.value.pop();
-      }
-      for (var i = 0; i < tagInfosJSON.length; i++) {
-        const tag = tagInfosJSON[i];
-        if (
-          tags.value.findIndex((item) => item.tagName === tag["tagName"]) == -1
-        ) {
-          publicTagList.value.push(
-            new TagInfo(
-              tag["id"],
-              tag["tagName"],
-              tag["tagNameAlias"],
-              tag["isPublicTag"],
-              tag["isMainTag"],
-              tag["tagCreatorId"]
-            )
-          );
-        }
-      }
-      console.log("publicTagList : ", publicTagList);
-    })
-    .catch((error) => console.log("error", error));
-};
 </script>
 
 <template>
@@ -332,42 +212,10 @@ const fetchTagsPublic = () => {
         <el-form-item label="MD5">
           <el-text>{{ pageImage.md5 }}</el-text>
         </el-form-item>
-        <el-form-item label="标签">
-          <template v-for="item in tags">
-            <el-popconfirm confirm-button-text="Yes" cancel-button-text="No" title="删除这个标签?"
-              @confirm="confirmDeleteTag(item.id)">
-              <template #reference>
-                <el-button>{{ item.tagName }}</el-button>
-              </template>
-            </el-popconfirm>
-          </template>
-        </el-form-item>
-        <el-form-item label="添加标签">
-          <el-select v-model="tagIdToAdd" placeholder="Select">
-            <el-option v-for="item in publicTagList" :key="item.id" :label="item.tagName" :value="item.id" />
-          </el-select>
-          <el-button @click="AddTagForImage">添加标签</el-button>
-        </el-form-item>
-        <template v-if="userInfos.isLogin">
-          <el-form-item label="进行操作">
-            <template v-if="!isKeepImage">
-              <el-button @click="keepImage">收藏图片</el-button>
-            </template>
-            <template v-else>
-              <!-- <el-button type="primary" @click="removeKeep">已经收藏</el-button> -->
-              <el-popconfirm confirm-button-text="Yes" cancel-button-text="No" title="删除这个标签?" @confirm="removeKeep">
-                <template #reference>
-                  <el-button type="primary">取消收藏</el-button>
-                </template>
-              </el-popconfirm>
-            </template>
-            <el-button @click="imageDeblur">图像去模糊</el-button>
-            <el-button @click="imageColorize">图像上色</el-button>
-          </el-form-item>
-        </template>
       </el-form>
     </el-col>
   </el-row>
 </template>
 
 <style></style>
+

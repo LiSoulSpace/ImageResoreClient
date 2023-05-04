@@ -3,7 +3,7 @@ import { requestUrlStore } from "@/stores/requestUrl";
 import { userInfoStore } from "@/stores/userInfo";
 import { computed, ref, onMounted, type ComputedRef, type Ref, watch } from "vue";
 import { requestHeaderStore } from "../stores/requestHeader";
-import { ImageInfo } from "@/stores/currentImage"
+import { ImageInfo, TagInfo } from "@/stores/currentImage"
 import { ElMessage } from "element-plus";
 const loginForm = ref({ username: "", password: "" });
 const store = requestHeaderStore();
@@ -17,7 +17,8 @@ const requestOptions: RequestInit = {
 };
 const requestHeaders = requestHeaderStore();
 onMounted(() => {
-    initTableImageData()
+    initTableData()
+    
     console.log("Login View : initTableImageData Over")
 })
 
@@ -57,16 +58,58 @@ const parseImageInfo = (imgTemp: Ref<ImageInfo[]>, index: number, imageInfoJson:
 };
 
 const tableImageData: Ref<ImageInfo[]> = ref([])
-const initTableImageData = () => {
+const initTableData = () => {
     if (userInfo.isLogin) {
         fetchUserImageInfoCount()
         fetchUserImageInfos()
-        console.log(tableImageData)
+        fetchTagsAll()
     }
 }
 const currentPage: Ref<number> = ref(1);
 const pageSize: Ref<number> = ref(10)
 const imageTotalCount: Ref<number> = ref(10);
+const tableTagData: Ref<TagInfo[]> = ref([]);
+
+const fetchTagsAll = () => {
+  const requestOptions: RequestInit = {
+    method: "GET",
+    headers: requestHeaders.getMyHeaders(),
+    redirect: "follow",
+  };
+  fetch(requestUrls.getTagsAllUrl(), requestOptions)
+    .then((response) => response.text())
+    .then((result) => {
+      console.log(result);
+      const resultJson = JSON.parse(result);
+      const tagInfos = resultJson["data"];
+      parseTagsInfo(tagInfos)
+    })
+    .catch((error) => {
+      console.log("error", error);
+      ElMessage({
+        message: `标签信息获取失败\n${error}`,
+        type: "error",
+      });
+    });
+}
+
+
+const parseTagsInfo = (tagInfo: any) => {
+  for (var i = tableTagData.value.length; i > 0; i--) {
+    tableTagData.value.pop()
+  }
+  for (var i = 0; i < tagInfo.length; i++) {
+    const tagI = tagInfo[i];
+    const data = new TagInfo(tagI["id"],
+      tagI["tagName"],
+      tagI["tagNameAlias"],
+      tagI["isPublicTag"],
+      tagI["isMainTag"],
+      tagI["tagCreatorId"]
+    )
+    tableTagData.value.push(data);
+  }
+}
 
 const fetchUserImageInfos = () => {
     const requestOptions: RequestInit = {
@@ -146,6 +189,12 @@ const handleImageEdit = (index: number, row: ImageInfo) => {
 const handleImageDelete = (index: number, row: ImageInfo) => {
     console.log(index, row)
 }
+const handleTagEdit = (index: number, row: ImageInfo) => {
+  console.log(index, row)
+}
+const handleTagDelete = (index: number, row: ImageInfo) => {
+  console.log(index, row)
+}
 </script>
 
 <template>
@@ -178,7 +227,25 @@ const handleImageDelete = (index: number, row: ImageInfo) => {
                 </el-table-column>
             </el-table>
         </el-tab-pane>
-        <el-tab-pane label="Config">Config</el-tab-pane>
+        <el-tab-pane label="TagTable">
+            <el-table :data="tableTagData" style="width: 100%">
+                <el-table-column min-width="40px" label="标签id" prop="id" />
+                <el-table-column label="标签名字" prop="tagName" />
+                <el-table-column label="标签别名" prop="tagNameAlias" />
+                <el-table-column label="是否为公共标签" prop="isPublicTag" />
+                <el-table-column label="是否为主要标签" prop="isMainTag" />
+                <el-table-column align="right">
+                  <template #header>
+                    <el-input v-model="searchImage" size="small" placeholder="Type to search" />
+                  </template>
+                  <template #default="scope">
+                    <el-button size="small" @click="handleTagEdit(scope.$index, scope.row)">Edit</el-button>
+                    <el-button size="small" type="danger"
+                      @click="handleTagDelete(scope.$index, scope.row)">Delete</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+        </el-tab-pane>
         <el-tab-pane label="Role">Role</el-tab-pane>
         <el-tab-pane label="Task">Task</el-tab-pane>
     </el-tabs>

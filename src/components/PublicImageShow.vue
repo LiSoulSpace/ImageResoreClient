@@ -7,6 +7,7 @@ import { requestHeaderStore } from "@/stores/requestHeader";
 import { requestUrlStore } from "@/stores/requestUrl";
 import { currentImageStore } from "@/stores/currentImage"
 import { ElMessage, genFileId } from "element-plus";
+//import ElText from "element-plus";
 import router from "@/router";
 import ImageInfoBlock from "./ImageInfoBlock.vue";
 
@@ -31,17 +32,30 @@ onMounted(() => {
   fetchImageUrlFromServer();
   currentPage.value = currentImage.currentPublicPage
   viewer.value.view(currentImage.currentPublicViewerImageIndex)
+  fetchTagsPublic()
 });
 
 const activeName = ref("1");
-const imgWidthDis = ref([100, 8000]);
-const imgHeightDis = ref([100, 8000]);
+const imgWidthDis = ref([0, 8000]);
+const imgHeightDis = ref([0, 8000]);
 const checkedWallpaper = ref(false);
 const checkedPeople = ref(false);
 const sourceImages: Ref<ImageData[]> = ref([]);
 const currentPage = ref(1);
 const pageSize = ref(9);
 const imageTotalCount = ref(9);
+// 下方内容有关于 多选输入框 用于tag的多选
+interface ListItem {
+  value: string
+  label: string
+  id?: number
+}
+
+const tagNameList = ref<string[]>([])
+const tagList = ref<ListItem[]>([])
+const tagOptions = ref<ListItem[]>([])
+const tagValue = ref<string[]>([])
+const tagLoading = ref(false)
 
 const requestUrls = requestUrlStore();
 const requestHeaders = requestHeaderStore();
@@ -98,9 +112,42 @@ const fetchImageTotalCount = () => {
     .catch((error) => console.log("error", error));
 };
 
+const fetchTagsPublic = () => {
+  const requestOptions: RequestInit = {
+    method: "GET",
+    headers: requestHeaders.getMyHeaders(),
+    redirect: "follow",
+  };
+  fetch(
+    requestUrls.getPublicTagsUrl(),
+    requestOptions
+  )
+    .then((response) => response.text())
+    .then((result) => {
+      const resultJson = JSON.parse(result);
+      const tagInfosJSON = resultJson['data']
+      while (tagList.value.length > 0) {
+        tagList.value.pop()
+      }
+      for (var i = 0; i < tagInfosJSON.length; i++) {
+        const tagInfo = tagInfosJSON[i]
+        const tagName: string = tagInfo["tagName"]
+        const tagId: number = tagInfo["id"]
+        tagList.value.push({ value: tagName, label: tagName, id: tagId })
+      }
+      console.log("list : ", tagList)
+    })
+    .catch((error) => console.log("error", error));
+}
+
 watch(currentPage, async (newPageSize, oldQuestion) => {
-  fetchImageUrlFromServer();
-  currentImage.setCurrentPublicPage(currentPage.value)
+  if (tagValue.value.length != 0) {
+    fetchImageCountByTags()
+    fetchImageInfoByTags()
+  } else {
+    fetchImageUrlFromServer();
+    currentImage.setCurrentPublicPage(currentPage.value)
+  }
 });
 
 const setSourceImages = (imagesInfo: any, infoType: string) => {
@@ -180,6 +227,74 @@ const inited = (viewerT: Viewer) => {
   viewer.value = viewerT;
 };
 
+const ConfirmSearchImages = () => {
+  if (tagValue.value.length != 0) {
+    console.log("tagValue:", tagValue.value)
+    currentPage.value = 1;
+    pageSize.value = 9;
+    fetchImageCountByTags()
+    fetchImageInfoByTags()
+  } else {
+    fetchImageTotalCount();
+    fetchImageUrlFromServer();
+    currentPage.value = 1
+    viewer.value.view(0)
+    fetchTagsPublic()
+  }
+}
+
+const fetchImageCountByTags = () => {
+  const requestOptions: RequestInit = {
+    method: "GET",
+    headers: requestHeaders.getMyHeaders(),
+    redirect: "follow",
+  };
+  fetch(requestUrls.getImageCountByTagsUrl(tagValue.value), requestOptions)
+    .then((response) => response.text())
+    .then((result) => {
+      const resultJson = JSON.parse(result);
+      const countByTags = Number(resultJson["data"]);
+      imageTotalCount.value = countByTags
+    })
+    .catch((error) => {
+      console.log("error", error);
+      ElMessage({
+        message: `图像信息获取失败\n${error}`,
+        type: "error",
+      });
+    });
+}
+
+const fetchImageInfoByTags = () => {
+  const requestOptions: RequestInit = {
+    method: "GET",
+    headers: requestHeaders.getMyHeaders(),
+    redirect: "follow",
+  };
+  fetch(requestUrls.getImgBaseInfoByTagPageUrl(tagValue.value, currentPage.value, pageSize.value), requestOptions)
+    .then((response) => response.text())
+    .then((result) => {
+      const resultJson = JSON.parse(result);
+      const imageInfo = resultJson["data"];
+      const imageInfoListJson = JSON.parse(imageInfo);
+      setSourceImages(imageInfoListJson, "json")
+    })
+    .catch((error) => {
+      console.log("error", error);
+      ElMessage({
+        message: `图像信息获取失败\n${error}`,
+        type: "error",
+      });
+    });
+}
+
+const ClearTagSelection = () => {
+  while (tagValue.value.length > 0) {
+    tagValue.value.pop()
+  }
+  imgWidthDis.value = [0, 8000]
+  imgHeightDis.value = [0, 8000]
+}
 
 const getRequestUploadHeader = () => {
   const newHeader = new Headers();
@@ -199,9 +314,6 @@ const add = () => {
   }
 };
 
-const clear_tag_selection = () => {
-
-}
 
 // 图像详情 button api
 const image_detail = () => {
@@ -271,52 +383,6 @@ function reset() {
 function toggleInline(inline: boolean) {
   state.value.options.inline = inline;
 }
-
-// 下方内容有关于 多选输入框 用于tag的多选
-interface ListItem {
-  value: string
-  label: string
-}
-
-const list = ref<ListItem[]>([])
-const options = ref<ListItem[]>([])
-const value = ref<string[]>([])
-const loading = ref(false)
-
-onMounted(() => {
-  list.value = states.map((item) => {
-    return { value: `value:${item}`, label: `label:${item}` }
-  })
-})
-
-const remoteMethod = (query: string) => {
-  if (query) {
-    loading.value = true
-    setTimeout(() => {
-      loading.value = false
-      options.value = list.value.filter((item) => {
-        return item.label.toLowerCase().includes(query.toLowerCase())
-      })
-    }, 200)
-  } else {
-    options.value = list.value
-  }
-}
-
-const states = [
-  'Alabama',
-  'Alaska',
-  'Arizona',
-  'Arkansas',
-  'California',
-  'Colorado',
-  'Connecticut',
-  'Delaware',
-  'Florida',
-  'Georgia',
-  'Wisconsin',
-  'Wyoming',
-]
 </script>
 
 <template>
@@ -324,56 +390,21 @@ const states = [
     <el-collapse v-model="activeName" accordion>
       <el-collapse-item title="分类选择" name="categorySelectionCollapseItem">
         <el-row>
-          <el-col :span="12">
-            <el-space wrap>
-              <div><el-checkbox v-model="checkedWallpaper" label="壁纸" /></div>
-              <div><el-checkbox v-model="checkedPeople" label="人像" /></div>
-            </el-space>
-          </el-col>
-          <el-col :span="4">
-            <div style="align-items: center;">
-              <el-space wrap size="4px">
-                <el-text style="width: 100px;">高度范围(输入)</el-text>
-                <el-input style="width: 60px;" v-model="imgHeightDis[0]" placeholder="min" />
-                <span>~</span>
-                <el-input style="width: 60px;" v-model="imgHeightDis[1]" placeholder="max" />
-              </el-space>
-              <el-space wrap size="4px">
-                <el-text style="width: 100px;">宽度范围(输入)</el-text>
-                <el-input style="width: 60px;" v-model="imgWidthDis[0]" placeholder="min" />
-                <span>~</span>
-                <el-input style="width: 60px;" v-model="imgWidthDis[1]" placeholder="max" />
-              </el-space>
-            </div>
-          </el-col>
-          <el-col :span="8">
-            <div>
-              <div class="slider-demo-block">
-                <el-text style="width: 100px;">图像高度范围</el-text>
-                <el-slider v-model="imgHeightDis" range :max="8000" />
-              </div>
-              <div class="slider-demo-block">
-                <el-text style="width: 100px;">图像宽度范围</el-text>
-                <el-slider v-model="imgWidthDis" range :max="8000" />
-              </div>
-            </div>
-          </el-col>
-        </el-row>
-        <el-row>
           <el-col :span="21">
-            <el-select v-model="value" multiple filterable reserve-keyword placeholder="Please enter a keyword"
+            <el-select v-model="tagValue" multiple filterable reserve-keyword placeholder="请选择标签"
               default-first-option>
               <!-- remote :remote-method="remoteMethod" :loading="loading" -->
-              <el-option v-for="item in list" :key="item.value" :label="item.label" :value="item.value" />
+              <el-option v-for="item in tagList" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </el-col>
           <el-col :span="3">
-            <el-button type="success">确认</el-button>
-            <el-button type="primary" @click="clear_tag_selection">清空</el-button>
+            <el-button type="success" @click="ConfirmSearchImages">确认</el-button>
+            <el-button type="primary" @click="ClearTagSelection">清空</el-button>
           </el-col>
         </el-row>
       </el-collapse-item>
     </el-collapse>
+    <!-- 切换模式 页码 -->
     <div class="methods is-flex">
       <div class="field has-addons">
         <p class="control">
@@ -405,6 +436,7 @@ const states = [
       <el-pagination v-model:current-page="currentPage" :page-size="pageSize" background layout="prev, pager, next"
         :total="imageTotalCount" />
     </div>
+    <!-- 两个模式下的操作 -->
     <div class="methods is-flex">
       <template v-if="state.options.inline">
         <div class="field has-addons">
@@ -497,6 +529,7 @@ const states = [
         <button type="button" class="button" @click="show">网页全屏</button>
       </template>
     </div>
+    <!-- 图像显示区域 -->
     <div class="tile is-ancestor">
       <template v-if="isOptionShow">
         <div class="tile is-2 is-vertical is-parent">

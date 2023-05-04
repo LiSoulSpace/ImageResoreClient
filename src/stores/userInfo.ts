@@ -51,9 +51,10 @@ export const userInfoStore = defineStore("userInfo", () => {
   };
 
   const login = (resultJson: any) => {
+    console.log("in userInfo login :", resultJson)
     userInfo.value.userId = resultJson["data"]["userId"];
     userInfo.value.username = resultJson["data"]["nickName"];
-    userInfo.value.avatar_image_path = resultJson["data"]["avatar"];
+    userInfo.value.avatar_image_path = requestUrls.getDomain() + resultJson["data"]["avatar"];
     requestHeaders.setHeaderKeyValue(
       "Authorization",
       "Bearer" + resultJson["data"]["token"]

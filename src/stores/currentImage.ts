@@ -35,6 +35,23 @@ export class ImageInfo {
   }
 }
 
+export class TagInfo {
+  id: number;
+  tagName: string;
+  tagNameAlias: string;
+  isPublicTag: number;
+  isMainTag: number;
+  tagCreatorId: number;
+  constructor(id: number, tagName: string, tagNameAl: string, isPublicTag: number, isMainTag: number, tagCreatorId: number) {
+    this.id = id;
+    this.tagName = tagName;
+    this.tagNameAlias = tagNameAl;
+    this.isPublicTag = isPublicTag;
+    this.isMainTag = isMainTag;
+    this.tagCreatorId = tagCreatorId;
+  }
+}
+
 export const currentImageStore = defineStore("currentImage", () => {
   const requestHeaders = requestHeaderStore();
   const requestUrls = requestUrlStore();

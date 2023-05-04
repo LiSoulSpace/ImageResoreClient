@@ -84,8 +84,7 @@ const redirectToLogin = () => {
           </template>
           <template #extra>
             <div class="flex">
-              <el-avatar :size="32" class="mr-3"
-                src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png" />
+              <el-avatar :size="32" class="mr-3" :src="userInfo.userInfo.avatar_image_path" />
               <span class="text-large font-600 mr-3">
                 {{ userInfo.userInfo.username }}
               </span>
@@ -117,14 +116,16 @@ const redirectToLogin = () => {
                 <div to="/">公共图像预览</div>
               </template>
             </el-menu-item>
-            <el-menu-item index="2" @click="routerTo('/imageshow')">
-              <el-icon>
-                <setting />
-              </el-icon>
-              <template #title>
-                <div to="/imageshow">个人图像预览</div>
-              </template>
-            </el-menu-item>
+            <template v-if="userInfo.isLogin">
+              <el-menu-item index="2" @click="routerTo('/imageshow')">
+                <el-icon>
+                  <setting />
+                </el-icon>
+                <template #title>
+                  <div to="/imageshow">个人图像预览</div>
+                </template>
+              </el-menu-item>
+            </template>
             <el-menu-item index="3" @click="routerTo('/login')">
               <el-icon>
                 <User />

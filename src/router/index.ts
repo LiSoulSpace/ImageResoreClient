@@ -30,6 +30,11 @@ const router = createRouter({
       component: () => import("../views/ImageInfoSingle.vue"),
     },
     {
+      path:"/imageRestore/:type/:imagemd5",
+      name: "imageRestore"
+      component:()=>import("../views/ImageRestoreView.vue")
+    },
+    {
       path: "/admin",
       name: "admin",
       component: () => import("../views/AdminView.vue"),
