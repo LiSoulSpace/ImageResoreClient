@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { requestUrlStore } from "@/stores/requestUrl";
 import { userInfoStore } from "@/stores/userInfo";
-import { computed, ref, onMounted, type ComputedRef, type Ref, watch } from "vue";
+import { computed, ref, onMounted, type ComputedRef, type Ref, watch, reactive } from "vue";
 import { requestHeaderStore } from "../stores/requestHeader";
 import { ImageInfo, TagInfo } from "@/stores/currentImage"
 import { ElMessage } from "element-plus";
+import { fa } from "element-plus/es/locale";
 const loginForm = ref({ username: "", password: "" });
 const store = requestHeaderStore();
 const userInfo = userInfoStore();
@@ -81,6 +82,8 @@ const initTableData = () => {
 const currentPage: Ref<number> = ref(1);
 const pageSize: Ref<number> = ref(10)
 const imageTotalCount: Ref<number> = ref(10);
+const dialogTagAddVisable: Ref<boolean> = ref<boolean>(false)
+const tagAddForm: Ref<TagInfo> = ref<TagInfo>(new TagInfo(0, "", "", 1, 0, 0))
 
 const fetchUserImageInfos = () => {
   const requestOptions: RequestInit = {
@@ -153,7 +156,8 @@ const parseUserTagInfo = (tagInfo: any) => {
   }
   for (var i = 0; i < tagInfo.length; i++) {
     const tagI = tagInfo[i];
-    const data = new TagInfo(tagI["id"],
+    const data = new TagInfo(
+      tagI["id"],
       tagI["tagName"],
       tagI["tagNameAlias"],
       tagI["isPublicTag"],
@@ -210,6 +214,36 @@ const handleTagEdit = (index: number, row: ImageInfo) => {
 const handleTagDelete = (index: number, row: ImageInfo) => {
   console.log(index, row)
 }
+const confirmAddTag = () => {
+  const requestOptions: RequestInit = {
+    method: "GET",
+    headers: requestHeaders.getMyHeaders(),
+    redirect: "follow",
+  };
+  fetch(
+    requestUrls.saveTagInfoUrl(
+      tagAddForm.value.tagName,
+      tagAddForm.value.tagNameAlias,
+      tagAddForm.value.isPublicTag
+    ),
+    requestOptions
+  )
+    .then((response) => response.text())
+    .then((result) => {
+      const resultJson = JSON.parse(result);
+      if (resultJson['code'] == 0) {
+        console.log(resultJson)
+      } else {
+        ElMessage.error('标签添加失败')
+      }
+    })
+    .catch((error) => {
+      ElMessage.error('添加标签发生错误', error)
+    });
+
+
+  dialogTagAddVisable.value = false
+}
 </script>
 
 <template>
@@ -218,8 +252,8 @@ const handleTagDelete = (index: number, row: ImageInfo) => {
       <el-col :span="6"></el-col>
       <el-col :span="12" class="demo-radius">
         <div class="radius" :style="{
-            borderRadius: `var(--el-border-radius-round)`,
-          }">
+          borderRadius: `var(--el-border-radius-round)`,
+        }">
           <div style="align-items: center; display:flex">
             <template v-if="!userInfo.isLogin">
               <el-form class="self-login-form">
@@ -278,6 +312,12 @@ const handleTagDelete = (index: number, row: ImageInfo) => {
           </el-table>
         </el-tab-pane>
         <el-tab-pane label="个人标签信息">
+          <el-row class="row-bg">
+            <el-col :span="18"></el-col>
+            <el-col :span="6">
+              <el-button @click="dialogTagAddVisable = true">添加标签</el-button>
+            </el-col>
+          </el-row>
           <el-table :data="tableTagData" style="width: 100%">
             <el-table-column min-width="40px" label="标签id" prop="id" />
             <el-table-column label="标签名字" prop="tagName" />
@@ -290,15 +330,37 @@ const handleTagDelete = (index: number, row: ImageInfo) => {
               </template>
               <template #default="scope">
                 <el-button size="small" @click="handleTagEdit(scope.$index, scope.row)">Edit</el-button>
-                <el-button size="small" type="danger"
-                  @click="handleTagDelete(scope.$index, scope.row)">Delete</el-button>
+                <el-button size="small" type="danger" @click="handleTagDelete(scope.$index, scope.row)">Delete</el-button>
               </template>
             </el-table-column>
           </el-table>
         </el-tab-pane>
         <!-- <el-tab-pane label="Role">Role</el-tab-pane> -->
       </el-tabs>
-
+      <el-dialog v-model="dialogTagAddVisable" title="添加标签">
+        <el-form :model="tagAddForm">
+          <el-form-item label="标签名称" label-width="240px">
+            <el-input v-model="tagAddForm.tagName" />
+          </el-form-item>
+          <el-form-item label="标签别名(用户搜索,逗号分割)" label-width="240px">
+            <el-input v-model="tagAddForm.tagNameAlias" />
+          </el-form-item>
+          <el-form-item label="是否为公共标签" label-width="240px">
+            <el-select v-model="tagAddForm.isPublicTag" placeholder="Please select a zone">
+              <el-option label="是" value=1 />
+              <el-option label="否" value=0 />
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="dialogTagAddVisable = false">取消</el-button>
+            <el-button type="primary" @click="confirmAddTag">
+              确认添加
+            </el-button>
+          </span>
+        </template>
+      </el-dialog>
     </template>
   </div>
 </template>

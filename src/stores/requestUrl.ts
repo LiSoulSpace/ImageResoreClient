@@ -24,6 +24,7 @@ export const requestUrlStore = defineStore("requestUrl", () => {
   const getImageInfoCount = "/restore/imageInfo/getImageInfoCount";
   const getImageInfoByMd5 = "/restore/imageInfo/getImageInfoByMd5";
   const getImageBaseInfoPage = "/restore/imageInfo/getImageBaseInfoPage";
+  const getImageInfoById = "/restore/imageInfo/getImageInfoById";
 
   //TagInfoController
   const saveTagInfo = "/restore/tag/saveTagInfo";
@@ -33,8 +34,11 @@ export const requestUrlStore = defineStore("requestUrl", () => {
   const getPublicTags = "/restore/tag/getPublicTags";
   const getMainTags = "/restore/tag/getMainTags";
   const getImageCountByTags = "/restore/tag/getImageCountByTags";
+  const getImageCountByTagsAndUserId =
+    "/restore/tag/getImageCountByTagsAndUserId";
   const getImageByTags = "/restore/tag/getImageByTags";
   const countByCreatorId = "/restore/tag/countByCreatorId";
+  const getPrivateTagsByCreatorId = "/restore/tag/getPrivateTagsByCreatorId";
 
   //ImageTagRelationController
   const getTagsByImageMd5 = "/restore/tag/getTagsByImageMd5";
@@ -128,8 +132,12 @@ export const requestUrlStore = defineStore("requestUrl", () => {
     return `${domain}${imageUri}`;
   };
 
-  const saveTagInfoUrl = (tagName: string) => {
-    return `${domain}${saveTagInfo}?tagName=${tagName}`;
+  const saveTagInfoUrl = (
+    tagName: string,
+    tagAlias: string,
+    isPublicTag: number
+  ) => {
+    return `${domain}${saveTagInfo}?tagName=${tagName}&tagNameAlias=${tagAlias}&isPublicTag=${isPublicTag}`;
   };
   const getTagsByCreatorIdUrl = (creatorId: number) => {
     return `${domain}${getTagsByCreatorId}?creatorId=${creatorId}`;
@@ -184,7 +192,19 @@ export const requestUrlStore = defineStore("requestUrl", () => {
     return url;
   };
 
-  const getImageCountByTagsUrl = (tags: string[]) => {
+  const getImageCountByTagsUrl = (tags: string[], userId?: number) => {
+    var url = `${domain}${getImageCountByTags}?`;
+    for (var i = 0; i < tags.length; i++) {
+      if (i == 0) url = url + "tags=" + tags[i];
+      else url = url + "&tags=" + tags[i];
+    }
+    if (userId) {
+      url = url + "&userId=" + userId;
+    }
+    return url;
+  };
+
+  const getImgCountByTagsAndUserIdUrl = (tags: string[], userId: number) => {
     var url = `${domain}${getImageCountByTags}?`;
     for (var i = 0; i < tags.length; i++) {
       if (i == 0) url = url + "tags=" + tags[i];
@@ -227,6 +247,21 @@ export const requestUrlStore = defineStore("requestUrl", () => {
   const getImgColorizeByIdUrl = (imageId: number) => {
     return `${domain}${getImageColorizeByImageId}?imageId=${imageId}`;
   };
+  const getImgInfoByIdUrl = (imageId: number) => {
+    return `${domain}${getImageInfoById}?imageId=${imageId}`;
+  };
+
+  const getImgBInfoByUserIdPage = (
+    currentPage: number,
+    pageSize: number,
+    userId: number
+  ) => {
+    return `${domain}${getImageBaseInfoByUserIdPage}?currentPage=${currentPage}&pageSize=${pageSize}&userId=${userId}`;
+  };
+
+  const getPriTagsByCreatorIdUrl = (creatorId: number) => {
+    return `${domain}${getPrivateTagsByCreatorId}?creatorId=${creatorId}`;
+  };
 
   return {
     getDomain,
@@ -266,5 +301,8 @@ export const requestUrlStore = defineStore("requestUrl", () => {
     saveTagImageReUrl,
     getImgDeblurByIdUrl,
     getImgColorizeByIdUrl,
+    getImgInfoByIdUrl,
+    getImgBInfoByUserIdPage,
+    getPriTagsByCreatorIdUrl,
   };
 });

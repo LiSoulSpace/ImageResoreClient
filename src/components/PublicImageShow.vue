@@ -51,11 +51,8 @@ interface ListItem {
   id?: number
 }
 
-const tagNameList = ref<string[]>([])
 const tagList = ref<ListItem[]>([])
-const tagOptions = ref<ListItem[]>([])
 const tagValue = ref<string[]>([])
-const tagLoading = ref(false)
 
 const requestUrls = requestUrlStore();
 const requestHeaders = requestHeaderStore();

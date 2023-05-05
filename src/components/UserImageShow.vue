@@ -8,24 +8,11 @@ import { requestUrlStore } from "@/stores/requestUrl";
 import { ElMessage, genFileId } from "element-plus";
 import type { UploadInstance, UploadProps, UploadRawFile } from "element-plus";
 import router from "@/router";
+import { currentImageStore } from "@/stores/currentImage";
 
 VueViewer.setDefaults({
   zIndexInline: 2021,
 });
-
-onMounted(() => {
-  fetchImageUrlFromServer();
-});
-
-const activeName = ref("1");
-const imgWidthDis = ref([100, 8000]);
-const imgHeightDis = ref([100, 8000]);
-const checkedWallpaper = ref(false);
-const checkedPeople = ref(false);
-const requestUrls = requestUrlStore();
-const requestHeaders = requestHeaderStore();
-const userInfo = userInfoStore();
-const isOptionShow = ref<boolean>(false)
 class ImageData {
   thumbnail: string;
   source: string;
@@ -37,10 +24,40 @@ class ImageData {
     this.title = title;
   }
 }
+
+onMounted(() => {
+  fetchImageTotalCount();
+  fetchImageUrlFromServer();
+  currentPage.value = currentImage.currentUserPage
+  viewer.value.view(currentImage.currentPublicViewerImageIndex)
+  fetchTags()
+});
+
+const activeName = ref("1");
+const imgWidthDis = ref([100, 8000]);
+const imgHeightDis = ref([100, 8000]);
+const checkedWallpaper = ref(false);
+const checkedPeople = ref(false);
+const requestUrls = requestUrlStore();
+const currentImage = currentImageStore()
+const requestHeaders = requestHeaderStore();
+const userInfo = userInfoStore();
+const isOptionShow = ref<boolean>(false)
+
 const sourceImages: Ref<ImageData[]> = ref([]);
 const currentPage = ref(1);
 const pageSize = ref(9);
 const imageTotalCount = ref(9);
+interface ListItem {
+  value: string
+  label: string
+  id?: number
+}
+
+const tagList = ref<ListItem[]>([])
+const tagValue = ref<string[]>([])
+
+
 
 const fetchImageUrlFromServer = () => {
   const requestOptions: RequestInit = {
@@ -49,10 +66,10 @@ const fetchImageUrlFromServer = () => {
     redirect: "follow",
   };
   fetch(
-    requestUrls.getImageInfoPageByUserIdUrl(
-      userInfo.userInfo.userId,
+    requestUrls.getImgBInfoByUserIdPage(
       currentPage.value,
-      pageSize.value
+      pageSize.value,
+      userInfo.userInfo.userId,
     ),
     requestOptions
   )
@@ -81,7 +98,7 @@ const fetchImageTotalCount = () => {
     redirect: "follow",
   };
   fetch(
-    requestUrls.getPublicImageCountUrl(),
+    requestUrls.getImageCountByUserIdUrl(userInfo.userInfo.userId),
     requestOptions
   )
     .then((response) => response.text())
@@ -93,8 +110,61 @@ const fetchImageTotalCount = () => {
     .catch((error) => console.log("error", error));
 };
 
+const fetchTags = () => {
+  const requestOptions: RequestInit = {
+    method: "GET",
+    headers: requestHeaders.getMyHeaders(),
+    redirect: "follow",
+  };
+  fetch(
+    requestUrls.getPublicTagsUrl(),
+    requestOptions
+  )
+    .then((response) => response.text())
+    .then((result) => {
+      const resultJson = JSON.parse(result);
+      const tagInfosJSON = resultJson['data']
+      while (tagList.value.length > 0) {
+        tagList.value.pop()
+      }
+      for (var i = 0; i < tagInfosJSON.length; i++) {
+        const tagInfo = tagInfosJSON[i]
+        const tagName: string = tagInfo["tagName"]
+        const tagId: number = tagInfo["id"]
+        tagList.value.push({ value: tagName, label: tagName, id: tagId })
+      }
+      console.log("list : ", tagList)
+    })
+    .catch((error) => console.log("error", error));
+  fetch(
+    requestUrls.getPriTagsByCreatorIdUrl(userInfo.userInfo.userId),
+    requestOptions
+  )
+    .then((response) => response.text())
+    .then((result) => {
+      const resultJson = JSON.parse(result);
+      const tagInfosJSON = resultJson['data']
+      for (var i = 0; i < tagInfosJSON.length; i++) {
+        const tagInfo = tagInfosJSON[i]
+        const tagName: string = tagInfo["tagName"]
+        const tagId: number = tagInfo["id"]
+        tagList.value.push({ value: tagName, label: tagName, id: tagId })
+      }
+      console.log("list : ", tagList)
+    })
+    .catch((error) => console.log("error", error));
+}
+
+
 watch(currentPage, async (newPageSize, oldQuestion) => {
-  fetchImageUrlFromServer();
+  // fetchImageUrlFromServer();
+  if (tagValue.value.length != 0) {
+    fetchImageCountByTags()
+    fetchImageInfoByTags()
+  } else {
+    fetchImageUrlFromServer();
+    currentImage.setCurrentUserPage(currentPage.value)
+  }
 });
 
 const setSourceImages = (imagesInfo: any, infoType: string) => {
@@ -104,8 +174,8 @@ const setSourceImages = (imagesInfo: any, infoType: string) => {
     }
     for (var i = 0; i < imagesInfo.length; i++) {
       const data = new ImageData(
-        requestUrls.getDomain() + imagesInfo[i]["imagePath"],
-        requestUrls.getDomain() + imagesInfo[i]["imagePath"],
+        requestUrls.getDomain() + imagesInfo[i]["sourcePath"],
+        requestUrls.getDomain() + imagesInfo[i]["thumbnailPath"],
         imagesInfo[i]["imageName"]
       );
       data.md5 = imagesInfo[i]['imageMd5']
@@ -174,6 +244,75 @@ const inited = (viewerT: Viewer) => {
   viewer.value = viewerT;
 };
 
+const ConfirmSearchImages = () => {
+  if (tagValue.value.length != 0) {
+    console.log("tagValue:", tagValue.value)
+    currentPage.value = 1;
+    pageSize.value = 9;
+    fetchImageCountByTags()
+    fetchImageInfoByTags()
+  } else {
+    fetchImageTotalCount();
+    fetchImageUrlFromServer();
+    currentPage.value = 1
+    viewer.value.view(0)
+    fetchTagsPublic()
+  }
+}
+
+const fetchImageCountByTags = () => {
+  const requestOptions: RequestInit = {
+    method: "GET",
+    headers: requestHeaders.getMyHeaders(),
+    redirect: "follow",
+  };
+  fetch(requestUrls.getImageCountByTagsUrl(tagValue.value,
+    userInfo.userInfo.userId), requestOptions)
+    .then((response) => response.text())
+    .then((result) => {
+      const resultJson = JSON.parse(result);
+      const countByTags = Number(resultJson["data"]);
+      imageTotalCount.value = countByTags
+    })
+    .catch((error) => {
+      console.log("error", error);
+      ElMessage({
+        message: `图像信息获取失败\n${error}`,
+        type: "error",
+      });
+    });
+}
+
+const fetchImageInfoByTags = () => {
+  const requestOptions: RequestInit = {
+    method: "GET",
+    headers: requestHeaders.getMyHeaders(),
+    redirect: "follow",
+  };
+  fetch(requestUrls.getImgBaseInfoByTagPageUrl(
+    tagValue.value,
+    currentPage.value,
+    pageSize.value,
+    userInfo.userInfo.userId
+  ),
+    requestOptions)
+    .then((response) => response.text())
+    .then((result) => {
+      const resultJson = JSON.parse(result);
+      const imageInfo = resultJson["data"];
+      const imageInfoListJson = JSON.parse(imageInfo);
+      setSourceImages(imageInfoListJson, "json")
+    })
+    .catch((error) => {
+      console.log("error", error);
+      ElMessage({
+        message: `图像信息获取失败\n${error}`,
+        type: "error",
+      });
+    });
+}
+
+
 const getRequestUploadUrl = () => {
   return requestUrls.uploadImageUrl(userInfo.userInfo.userId);
 };
@@ -214,13 +353,20 @@ const submitUpload = () => {
     type: "success",
   });
 };
-const clear_tag_selection = () => {
 
+const ClearTagSelection = () => {
+  while (tagValue.value.length > 0) {
+    tagValue.value.pop()
+  }
+  imgWidthDis.value = [0, 8000]
+  imgHeightDis.value = [0, 8000]
 }
 
 // 图像详情 button api
 const image_detail = () => {
+  currentImage.setCurrentUserViewerImageIndex(viewer.value.index)
   router.push(`imageinfo/${sourceImages.value[viewer.value.index].md5}`)
+  router.isReady()
 }
 
 const remove = () => {
@@ -291,41 +437,6 @@ const list = ref<ListItem[]>([])
 const options = ref<ListItem[]>([])
 const value = ref<string[]>([])
 const loading = ref(false)
-
-onMounted(() => {
-  list.value = states.map((item) => {
-    return { value: `value:${item}`, label: `label:${item}` }
-  })
-})
-
-const remoteMethod = (query: string) => {
-  if (query) {
-    loading.value = true
-    setTimeout(() => {
-      loading.value = false
-      options.value = list.value.filter((item) => {
-        return item.label.toLowerCase().includes(query.toLowerCase())
-      })
-    }, 200)
-  } else {
-    options.value = list.value
-  }
-}
-
-const states = [
-  'Alabama',
-  'Alaska',
-  'Arizona',
-  'Arkansas',
-  'California',
-  'Colorado',
-  'Connecticut',
-  'Delaware',
-  'Florida',
-  'Georgia',
-  'Wisconsin',
-  'Wyoming',
-]
 </script>
 
 <template>
@@ -333,52 +444,16 @@ const states = [
     <el-collapse v-model="activeName" accordion>
       <el-collapse-item title="分类选择" name="categorySelectionCollapseItem">
         <el-row>
-          <el-col :span="12">
-            <el-space wrap>
-              <div><el-checkbox v-model="checkedWallpaper" label="壁纸" /></div>
-              <div><el-checkbox v-model="checkedPeople" label="人像" /></div>
-            </el-space>
-          </el-col>
-          <el-col :span="4">
-            <div style="align-items: center;">
-              <el-space wrap size="4px">
-                <el-text style="width: 100px;">高度范围(输入)</el-text>
-                <el-input style="width: 60px;" v-model="imgHeightDis[0]" placeholder="min" />
-                <span>~</span>
-                <el-input style="width: 60px;" v-model="imgHeightDis[1]" placeholder="max" />
-              </el-space>
-              <el-space wrap size="4px">
-                <el-text style="width: 100px;">宽度范围(输入)</el-text>
-                <el-input style="width: 60px;" v-model="imgWidthDis[0]" placeholder="min" />
-                <span>~</span>
-                <el-input style="width: 60px;" v-model="imgWidthDis[1]" placeholder="max" />
-              </el-space>
-            </div>
-          </el-col>
-          <el-col :span="8">
-            <div>
-              <div class="slider-demo-block">
-                <el-text style="width: 100px;">图像高度范围</el-text>
-                <el-slider v-model="imgHeightDis" range :max="8000" />
-              </div>
-              <div class="slider-demo-block">
-                <el-text style="width: 100px;">图像宽度范围</el-text>
-                <el-slider v-model="imgWidthDis" range :max="8000" />
-              </div>
-            </div>
-          </el-col>
-        </el-row>
-        <el-row>
           <el-col :span="21">
-            <el-select v-model="value" multiple filterable reserve-keyword placeholder="Please enter a keyword"
+            <el-select v-model="tagValue" multiple filterable reserve-keyword placeholder="请选择标签"
               default-first-option>
               <!-- remote :remote-method="remoteMethod" :loading="loading" -->
-              <el-option v-for="item in list" :key="item.value" :label="item.label" :value="item.value" />
+              <el-option v-for="item in tagList" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </el-col>
           <el-col :span="3">
-            <el-button type="success">确认</el-button>
-            <el-button type="primary" @click="clear_tag_selection">清空</el-button>
+            <el-button type="success" @click="ConfirmSearchImages">确认</el-button>
+            <el-button type="primary" @click="ClearTagSelection">清空</el-button>
           </el-col>
         </el-row>
       </el-collapse-item>

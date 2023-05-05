@@ -42,7 +42,14 @@ export class TagInfo {
   isPublicTag: number;
   isMainTag: number;
   tagCreatorId: number;
-  constructor(id: number, tagName: string, tagNameAl: string, isPublicTag: number, isMainTag: number, tagCreatorId: number) {
+  constructor(
+    id: number,
+    tagName: string,
+    tagNameAl: string,
+    isPublicTag: number,
+    isMainTag: number,
+    tagCreatorId: number
+  ) {
     this.id = id;
     this.tagName = tagName;
     this.tagNameAlias = tagNameAl;
@@ -55,7 +62,7 @@ export class TagInfo {
 export const currentImageStore = defineStore("currentImage", () => {
   const requestHeaders = requestHeaderStore();
   const requestUrls = requestUrlStore();
-  
+
   const currentPublicPage = ref<number>(1);
   const currentPublicViewerImageIndex = ref<number>(0);
   const setCurrentPublicPage = (currentPage: number) => {
@@ -120,6 +127,6 @@ export const currentImageStore = defineStore("currentImage", () => {
     currentUserPage,
     currentUserViewerImageIndex,
     setCurrentUserPage,
-    setCurrentUserViewerImageIndex
+    setCurrentUserViewerImageIndex,
   };
 });

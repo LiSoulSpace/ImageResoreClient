@@ -18,7 +18,6 @@ const requestOptions: RequestInit = {
 const requestHeaders = requestHeaderStore();
 onMounted(() => {
     initTableData()
-    
     console.log("Login View : initTableImageData Over")
 })
 

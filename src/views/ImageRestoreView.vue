@@ -14,6 +14,7 @@ const requestUrls = requestUrlStore();
 const requestHeaders = requestHeaderStore();
 const userInfos = userInfoStore();
 const pageImage: Ref<ImageInfo> = ref<ImageInfo>(new ImageInfo(""));
+const restoreImage: Ref<ImageInfo[]> = ref<ImageInfo[]>([])
 const isKeepImage: Ref<boolean> = ref<boolean>(false);
 const tags: Ref<TagInfo[]> = ref<TagInfo[]>([]);
 const publicTagList: Ref<TagInfo[]> = ref<TagInfo[]>([]);
@@ -24,11 +25,20 @@ onMounted(() => {
   pageImage.value.md5 = imagemd5;
   fetchImageInfoByMd5(imagemd5);
   fetchImgUserRelation();
-  fetchTagsByImageMd5(imagemd5);
 });
 
 const parseImageInfo = (imageInfoJson: any) => {
   pageImage.value.updateInfo(
+    imageInfoJson["id"],
+    imageInfoJson["imageName"],
+    requestUrls.getImageSrcUrl(imageInfoJson["imagePath"]),
+    imageInfoJson["imageType"],
+    imageInfoJson["imageWidth"],
+    imageInfoJson["imageHeight"]
+  );
+};
+const parseRestoreInfo = (imageInfoJson: any, index: number) => {
+  restoreImage.value[index].updateInfo(
     imageInfoJson["id"],
     imageInfoJson["imageName"],
     requestUrls.getImageSrcUrl(imageInfoJson["imagePath"]),
@@ -86,6 +96,8 @@ const fetchImageInfoByMd5 = (md5: string) => {
       const imageInfoJson = JSON.parse(imageInfo);
       pageImage.value.md5 = md5;
       parseImageInfo(imageInfoJson);
+      //TODO 
+      getImageRestoreInfo();
     })
     .catch((error) => {
       console.log("error", error);
@@ -95,6 +107,31 @@ const fetchImageInfoByMd5 = (md5: string) => {
       });
     });
 };
+
+const fetchRestoreInfoById = (imageId: number, index:number) => {
+  const requestOptions: RequestInit = {
+    method: "GET",
+    headers: requestHeaders.getMyHeaders(),
+    redirect: "follow",
+  };
+  fetch(requestUrls.getImgInfoByIdUrl(imageId), requestOptions)
+    .then((response) => response.text())
+    .then((result) => {
+      console.log(result);
+      const resultJson = JSON.parse(result);
+      const imageInfo = resultJson["data"];
+      const imageInfoJson = JSON.parse(imageInfo);
+      restoreImage.value[index].md5 = imageInfoJson['imageMd5']
+      parseRestoreInfo(imageInfoJson, index);
+    })
+    .catch((error) => {
+      console.log("error", error);
+      ElMessage({
+        message: `图像信息获取失败\n${error}`,
+        type: "error",
+      });
+    });
+}
 
 const fetchKeepImage = (isSet: number) => {
   const requestOptions: RequestInit = {
@@ -137,36 +174,47 @@ const removeKeep = () => {
   isKeepImage.value = false;
 };
 
-const imageDeblur = () => {
-  console.log("image deblur: ", pageImage.value);
+const getImageRestoreInfo = () => {
   const requestOptions: RequestInit = {
     method: "GET",
     headers: requestHeaders.getMyHeaders(),
     redirect: "follow",
   };
-
-  fetch(requestUrls.getImgDeblurByIdUrl(pageImage.value.id), requestOptions)
+  if (restoreType == 'deblur') {
+    fetch(requestUrls.getImgDeblurByIdUrl(pageImage.value.id), requestOptions)
+      .then((response) => response.text())
+      .then((result) => {
+        const resultJson = JSON.parse(result);
+        console.log(resultJson)
+        const resultDataJson = JSON.parse(resultJson["data"])
+        console.log("resultDataJson:", resultDataJson)
+        for (var i = 0; i < resultDataJson.length; i++) {
+          console.log(resultDataJson[i])
+          restoreImage.value.push(new ImageInfo(""))
+          restoreImage.value[i].id = resultDataJson[i]['restoreImageId']
+          fetchRestoreInfoById(resultDataJson[i]['restoreImageId'], i)
+        }
+      })
+      .catch((error) => console.log("error", error));
+  } else if (restoreType == 'colorize') {
+    fetch(requestUrls.getImgColorizeByIdUrl(pageImage.value.id), requestOptions)
     .then((response) => response.text())
-    .then((result) => {
-      const resultJson = JSON.parse(result);
+      .then((result) => {
+        const resultJson = JSON.parse(result);
+        console.log(resultJson)
+        const resultDataJson = JSON.parse(resultJson["data"])
+        console.log("resultDataJson:", resultDataJson)
+        for (var i = 0; i < resultDataJson.length; i++) {
+          console.log(resultDataJson[i])
+          restoreImage.value.push(new ImageInfo(""))
+          restoreImage.value[i].id = resultDataJson[i]['restoreImageId']
+          fetchRestoreInfoById(resultDataJson[i]['restoreImageId'], i)
+        }
+      })
+      .catch((error) => console.log("error", error));
+  }
 
-      if (resultJson["code"] == 0) {
-        const result = resultJson["data"]
-      } else {
-        fetch(
-          requestUrls.imageRestoreByIdUrl(pageImage.value.id),
-          requestOptions
-        )
-          .then((response) => response.text())
-          .then((result) => {
-            const resultJson = JSON.parse(result);
-            const tagInfosJSON = resultJson["data"];
-            console.log(tagInfosJSON)
-          })
-          .catch((error) => console.log("error", error));
-      }
-    })
-    .catch((error) => console.log("error", error));
+
 };
 
 const imageColorize = () => {
@@ -189,13 +237,21 @@ const imageColorize = () => {
 
 <template>
   <el-row :gutter="20">
-    <el-col :span="16">
+    <el-col :span="12">
       <div class="grid-content ep-bg-purple" />
       <div>
         <el-image :src="pageImage.src" fit="scale-down" />
       </div>
     </el-col>
-    <el-col :span="8">
+    <el-col :span="12">
+      <div class="grid-content ep-bg-purple" />
+      <div v-for="image in restoreImage">
+        <el-image :src="image.src" fit="scale-down" />
+      </div>
+    </el-col>
+  </el-row>
+  <el-row :gutter="20">
+    <el-col :span="12">
       <el-form :model="pageImage" label-width="120px">
         <el-form-item label="名字">
           <el-text>{{ pageImage.name }}</el-text>
